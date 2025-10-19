@@ -17,7 +17,8 @@ MATERIAL_FILE = "material_classes_positions.parquet"
 RESULT_FILE = "legality_results.parquet"
 INITIAL_SAMPLES = [1000, 2000]
 MAX_SAMPLE = 128_000
-THRESHOLD_DIFF = 0.05  # Abweichung für adaptive Samplegröße
+REL_THRESHOLD = 0.1  # relative Abweichung 10%
+ABS_THRESHOLD = 1e-6 # absolute Abweichung für sehr kleine Ratios
 
 
 def test_legality_for_class(white_material, black_material, sample_size):
@@ -67,7 +68,11 @@ def main():
             last_two = class_results.sort_values("sample_size", ascending=False).head(2)
             ratio_max = last_two.iloc[0]["valid_ratio"]
             ratio_second = last_two.iloc[1]["valid_ratio"]
-            if abs(ratio_max - ratio_second) > THRESHOLD_DIFF:
+
+            diff_abs = abs(ratio_max - ratio_second)
+            diff_rel = diff_abs / max(ratio_second, 1e-12)
+
+            if diff_rel > REL_THRESHOLD and diff_abs > ABS_THRESHOLD:
                 pending_samples = [min(last_two.iloc[0]["sample_size"] * 2, MAX_SAMPLE)]
             else:
                 pending_samples = []
@@ -77,7 +82,8 @@ def main():
             ratio = test_legality_for_class(white_material, black_material, sample_size)
             duration = time.time() - start
             logging.info(
-                f"→ Klasse {class_id}, {sample_size} Tests: {ratio:.4f} gültig ({duration:.1f}s)"
+                f"→ Klasse {class_id}, {sample_size} Tests: "
+                f"{ratio:.6e} gültig ({duration:.1f}s)"
             )
 
             # Ergebnis speichern
