@@ -15,7 +15,9 @@ logging.basicConfig(
 # === Parameter ===
 MATERIAL_FILE = "material_classes_positions.parquet"
 RESULT_FILE = "legality_results.parquet"
-SAMPLE_SIZES = [100, 1000, 10000]
+INITIAL_SAMPLES = [1000, 2000]
+MAX_SAMPLE = 128_000
+THRESHOLD_DIFF = 0.05  # Abweichung für adaptive Samplegröße
 
 
 def test_legality_for_class(white_material, black_material, sample_size):
@@ -32,9 +34,11 @@ def test_legality_for_class(white_material, black_material, sample_size):
 
 
 def main():
-    # === Materialklassen laden ===
+    # === Materialklassen laden und nach positions sortieren ===
     df = pd.read_parquet(MATERIAL_FILE)
-    logging.info(f"{len(df)} Materialklassen aus {MATERIAL_FILE} geladen.")
+    df["positions"] = df["positions"].apply(lambda x: float(x))
+    df = df.sort_values("positions", ascending=False).reset_index(drop=True)
+    logging.info(f"{len(df)} Materialklassen geladen und nach 'positions' sortiert.")
 
     # === Ergebnisse vorbereiten oder laden ===
     if os.path.exists(RESULT_FILE):
@@ -50,39 +54,39 @@ def main():
         white_material = eval(row["white"])
         black_material = eval(row["black"])
 
-        # Prüfen, ob alle Samplegrößen schon vorhanden sind
-        existing_samples = set(results.loc[results["id"] == class_id, "sample_size"])
-        pending_samples = [s for s in SAMPLE_SIZES if s not in existing_samples]
-
-        if not pending_samples:
-            continue  # alles schon berechnet
-
-        if i % 1000 == 0:
-            logging.info(f"→ Fortschritt: {i}/{len(df)} Klassen verarbeitet ...")
-
-        logging.info(
-            f"Klasse {class_id}: {white_material} vs {black_material} | "
-            f"noch ausstehend: {pending_samples}"
-        )
+        # Vorhandene Ergebnisse für die Klasse
+        class_results = results.loc[results["id"] == class_id].copy()
+        sample_sizes_done = sorted(class_results["sample_size"].tolist())
+        
+        # Startwerte für die Schleife
+        if len(sample_sizes_done) < 2:
+            # fehlende INITIAL_SAMPLES berechnen
+            pending_samples = [s for s in INITIAL_SAMPLES if s not in sample_sizes_done]
+        else:
+            # Prüfen auf Differenz zwischen größtem und zweitgrößtem Sample
+            last_two = class_results.sort_values("sample_size", ascending=False).head(2)
+            ratio_max = last_two.iloc[0]["valid_ratio"]
+            ratio_second = last_two.iloc[1]["valid_ratio"]
+            if abs(ratio_max - ratio_second) > THRESHOLD_DIFF:
+                pending_samples = [min(last_two.iloc[0]["sample_size"] * 2, MAX_SAMPLE)]
+            else:
+                pending_samples = []
 
         for sample_size in pending_samples:
             start = time.time()
             ratio = test_legality_for_class(white_material, black_material, sample_size)
             duration = time.time() - start
-
             logging.info(
-                f"→ Klasse {class_id}, {sample_size} Tests: "
-                f"{ratio:.4f} gültig ({duration:.1f}s)"
+                f"→ Klasse {class_id}, {sample_size} Tests: {ratio:.4f} gültig ({duration:.1f}s)"
             )
 
             # Ergebnis speichern
-            new_row = pd.DataFrame(
-                [{"id": class_id, "sample_size": sample_size, "valid_ratio": ratio}]
-            )
+            new_row = pd.DataFrame([{"id": class_id, "sample_size": sample_size, "valid_ratio": ratio}])
             results = pd.concat([results, new_row], ignore_index=True)
-
-            # Nach jedem Schritt abspeichern
             results.to_parquet(RESULT_FILE, index=False)
+
+        if i % 1000 == 0:
+            logging.info(f"→ Fortschritt: {i}/{len(df)} Klassen verarbeitet ...")
 
     logging.info("Simulation abgeschlossen ✅")
     logging.info(f"Ergebnisse gespeichert in: {RESULT_FILE}")
