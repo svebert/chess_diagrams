@@ -242,7 +242,7 @@ def main():
     plot_positions_sorted(df_analysis)
     plot_max_sample(df_res)
     plot_valid_ratio_sorted(df_analysis)
-    plot_positions_per_num_pieces(df_analysis, df_mat)
+    plot_positions_per_num_pieces(df_analysis)
     plot_valid_ratio_per_num_pieces(df_analysis, df_mat)
 
 
