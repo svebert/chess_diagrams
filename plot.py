@@ -5,11 +5,11 @@ plot.py
 Generates various plots for chess material classes and legality factors:
 
 1. Histogram of number of pieces per material class.
-2. Positions per material class + weighted by valid_ratio (only valid_ratio != 1).
+2. Positions per material class + weighted by valid_ratio (only valid_ratio < 1).
 3. Max sample_size per class.
 4. Valid ratio per class (log y-axis, sorted by positions) with average lines.
-5. Positions by number of pieces (log y-axis).
-6. Valid ratio by number of pieces (log y-axis).
+5. Positions by number of pieces (binned, log y-axis, sum of positions).
+6. Valid ratio by number of pieces (binned, log y-axis, weighted mean by positions).
 
 Optimized for large DataFrames.
 """
@@ -79,14 +79,14 @@ def main():
     plt.close()
 
     # ---------------------------
-    # 2. Positions vs weighted (sorted, points, only valid_ratio != 1)
+    # 2. Positions vs weighted (sorted, points, only valid_ratio < 1)
     # ---------------------------
     df_plot = df_analysis.copy()
     df_plot['positions_float'] = df_plot['positions'].astype(float)
     df_plot['weighted_positions_float'] = df_plot['weighted_estimated_legal_str'].astype(float)
 
-    # Filter only valid_ratio != 1
-    df_plot = df_plot[df_plot['weighted_positions_float'] != df_plot['positions_float']]
+    # Filter only valid_ratio < 1
+    df_plot = df_plot[df_plot['weighted_positions_float'] < df_plot['positions_float']]
 
     # Sort by positions
     df_plot = df_plot.sort_values('positions_float').reset_index(drop=True)
@@ -121,14 +121,8 @@ def main():
     # ---------------------------
     # 4. Valid ratio per class (log y-axis) sorted by positions
     # ---------------------------
-    df_valid_ratio = df_analysis.copy()
-    df_valid_ratio['positions_float'] = df_valid_ratio['positions'].astype(float)
-    df_valid_ratio['weighted_positions_float'] = df_valid_ratio['weighted_estimated_legal_str'].astype(float)
-    # Compute valid_ratio
+    df_valid_ratio = df_plot.copy()
     df_valid_ratio['valid_ratio'] = df_valid_ratio['weighted_positions_float'] / df_valid_ratio['positions_float']
-
-    # Sort by positions
-    df_valid_ratio = df_valid_ratio.sort_values('positions_float').reset_index(drop=True)
 
     avg_ratio = df_valid_ratio['valid_ratio'].mean()
     weighted_avg_ratio = np.average(df_valid_ratio['valid_ratio'], weights=df_valid_ratio['positions_float'])
@@ -148,19 +142,20 @@ def main():
     plt.close()
 
     # ---------------------------
-    # 5. Positions by number of pieces (log y-axis)
+    # 5. Positions by number of pieces (binned, sum)
     # ---------------------------
-    df_pos_pieces = df_analysis.copy()
-    df_pos_pieces['positions_float'] = df_pos_pieces['positions'].astype(float)
-    df_pos_pieces['weighted_positions_float'] = df_pos_pieces['weighted_estimated_legal_str'].astype(float)
-    df_pos_pieces['num_pieces'] = df_mat['num_pieces']
+    df_bin = df_plot.copy()
+    df_bin['num_pieces'] = df_mat['num_pieces']
+
+    positions_sum = df_bin.groupby('num_pieces')['positions_float'].sum()
+    weighted_positions_sum = df_bin.groupby('num_pieces')['weighted_positions_float'].sum()
 
     plt.figure(figsize=(10,6))
-    plt.scatter(df_pos_pieces['num_pieces'], df_pos_pieces['positions_float'], s=10, alpha=0.7, label='Positions')
-    plt.scatter(df_pos_pieces['num_pieces'], df_pos_pieces['weighted_positions_float'], s=10, alpha=0.7, label='Positions * valid_ratio', color='orange')
+    plt.bar(positions_sum.index - 0.2, positions_sum.values, width=0.4, label='Positions', color='skyblue')
+    plt.bar(weighted_positions_sum.index + 0.2, weighted_positions_sum.values, width=0.4, label='Positions * valid_ratio', color='orange')
     plt.xlabel("Number of Pieces")
     plt.ylabel("Number of Positions")
-    plt.title("Positions per Number of Pieces")
+    plt.title("Positions per Number of Pieces (calculated)")
     plt.yscale('log')
     plt.legend()
     plt.tight_layout()
@@ -169,24 +164,25 @@ def main():
     plt.close()
 
     # ---------------------------
-    # 6. Valid ratio by number of pieces (log y-axis)
+    # 6. Valid ratio by number of pieces (binned, weighted mean)
     # ---------------------------
-    df_ratio_pieces = df_analysis.copy()
-    df_ratio_pieces['positions_float'] = df_ratio_pieces['positions'].astype(float)
-    df_ratio_pieces['weighted_positions_float'] = df_ratio_pieces['weighted_estimated_legal_str'].astype(float)
-    df_ratio_pieces['num_pieces'] = df_mat['num_pieces']
-    df_ratio_pieces['valid_ratio'] = df_ratio_pieces['weighted_positions_float'] / df_ratio_pieces['positions_float']
+    df_bin['valid_ratio'] = df_bin['weighted_positions_float'] / df_bin['positions_float']
 
-    avg_ratio = df_ratio_pieces['valid_ratio'].mean()
-    weighted_avg_ratio = np.average(df_ratio_pieces['valid_ratio'], weights=df_ratio_pieces['positions_float'])
+    def weighted_mean(group):
+        return np.average(group['valid_ratio'], weights=group['positions_float'])
+
+    valid_ratio_bin = df_bin.groupby('num_pieces').apply(weighted_mean)
+
+    avg_ratio_overall = valid_ratio_bin.mean()
+    weighted_avg_ratio_overall = np.average(valid_ratio_bin, weights=positions_sum.values)
 
     plt.figure(figsize=(10,6))
-    plt.scatter(df_ratio_pieces['num_pieces'], df_ratio_pieces['valid_ratio'], s=10, alpha=0.7)
-    plt.axhline(avg_ratio, color='red', linestyle='--', label='Average valid_ratio')
-    plt.axhline(weighted_avg_ratio, color='green', linestyle='--', label='Weighted avg valid_ratio')
+    plt.bar(valid_ratio_bin.index - 0.2, valid_ratio_bin.values, width=0.4, color='orange', label='Weighted valid_ratio')
+    plt.axhline(avg_ratio_overall, color='red', linestyle='--', label='Average valid_ratio')
+    plt.axhline(weighted_avg_ratio_overall, color='green', linestyle='--', label='Weighted avg valid_ratio')
     plt.xlabel("Number of Pieces")
     plt.ylabel("Valid Ratio")
-    plt.title("Valid Ratio per Number of Pieces")
+    plt.title("Valid Ratio per Number of Pieces (weighted)")
     plt.yscale('log')
     plt.legend()
     plt.tight_layout()
@@ -197,4 +193,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
