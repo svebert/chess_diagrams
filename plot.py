@@ -1,10 +1,11 @@
- #!/usr/bin/env python3
+#!/usr/bin/env python3
 """
 plot.py
 
 Erzeugt verschiedene Plots zu den Materialklassen und Legalitätsfaktoren:
 1. Histogramm der Anzahl Figuren pro Materialklasse.
 2. Positionen pro Materialklasse + gewichtet durch valid_ratio (logarithmische Y-Achse).
+   Klassen werden nach Anzahl Positionen sortiert für saubere Darstellung.
 3. Maximal sample_size pro Klasse.
 
 Optimiert für große DataFrames.
@@ -57,19 +58,22 @@ def main():
     logger.info("Histogramm der Materialklassen gespeichert: material_class_histogram.png")
     plt.close()
 
-    # --- Positions vs weighted (logarithmische Y-Achse) ---
+    # --- Positions vs weighted (logarithmische Y-Achse, sortiert) ---
     df_plot = df_analysis.copy()
     # Positions als float
     df_plot['positions_float'] = df_plot['positions'].astype(float)
     # Weighted estimated legal
     df_plot['weighted_positions_float'] = df_plot['weighted_estimated_legal_str'].astype(float)
 
+    # Sortieren nach Positionsanzahl für glatteren Plot
+    df_plot = df_plot.sort_values('positions_float').reset_index(drop=True)
+
     plt.figure(figsize=(12,6))
     plt.plot(df_plot['id'], df_plot['positions_float'], label='Positions', alpha=0.7)
     plt.plot(df_plot['id'], df_plot['weighted_positions_float'], label='Positions * valid_factor', alpha=0.7)
-    plt.xlabel("Materialklasse ID")
+    plt.xlabel("Materialklasse ID (sortiert nach Positionen)")
     plt.ylabel("Anzahl Stellungen")
-    plt.title("Anzahl Positionen pro Materialklasse")
+    plt.title("Anzahl Positionen pro Materialklasse (sortiert)")
     plt.yscale("log")  # logarithmische Y-Achse
     plt.legend()
     plt.tight_layout()
@@ -91,4 +95,4 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
+ 
