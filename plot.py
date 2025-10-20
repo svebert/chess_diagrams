@@ -40,9 +40,9 @@ ANALYSIS_FILE = "legality_analysis.parquet"
 RESULT_FILE = "legality_results.parquet"
 
 OUT_HIST_NUM_PIECES = "material_class_histogram.png"
-OUT_POS_SORTED = "positions_vs_weighted_sorted_filtered.png"
+OUT_POS_SORTED = "positions_per_class.png"
 OUT_MAX_SAMPLE = "max_sample_per_class.png"
-OUT_VALID_RATIO_SORTED = "valid_ratio_sorted.png"
+OUT_VALID_RATIO_SORTED = "valid_ratio_per_class.png"
 OUT_POS_PER_NUM_PIECES = "positions_per_num_pieces.png"
 OUT_VALID_RATIO_PER_NUM_PIECES = "valid_ratio_per_num_pieces.png"
 
