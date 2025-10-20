@@ -2,23 +2,25 @@
 """
 plot.py
 
-Erstellt Plots basierend auf:
-- material_classes_positions.parquet
-- legality_analysis.parquet
-- legality_results.parquet (für max sample_size)
+Erzeugt verschiedene Plots zu den Materialklassen und Legalitätsfaktoren:
+1. Histogramm der Anzahl Figuren pro Materialklasse.
+2. Positionen pro Materialklasse + gewichtet durch valid_ratio.
+3. Maximal sample_size pro Klasse.
+
+Optimiert für große DataFrames.
 """
+
 import pandas as pd
-import matplotlib
-matplotlib.use('Agg')  # kein GUI, direkt PNG speichern
-import matplotlib.pyplot as plt
-from tqdm import tqdm
-import logging
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import logging
+import os
 
 # Logging
 logging.basicConfig(
     level=logging.INFO,
-    format="%(asctime)s [%(levelname)s]  %(message)s",
+    format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%H:%M:%S",
 )
 logger = logging.getLogger(__name__)
@@ -29,74 +31,62 @@ ANALYSIS_FILE = "legality_analysis.parquet"
 RESULT_FILE = "legality_results.parquet"
 
 def main():
-    # --- Materialklassen laden ---
+    # --- Daten laden ---
     logger.info("Lade Materialklassen...")
     df_mat = pd.read_parquet(MATERIAL_FILE)
     logger.info(f"{len(df_mat):,} Materialklassen geladen.")
 
-    # --- Analyse laden ---
     logger.info("Lade Analyse-Ergebnisse...")
     df_analysis = pd.read_parquet(ANALYSIS_FILE)
     logger.info(f"{len(df_analysis):,} Zeilen geladen.")
 
-    # --- Max sample_size laden ---
     logger.info("Lade Ergebnisse für max sample_size...")
     df_res = pd.read_parquet(RESULT_FILE)
-    max_sample_df = df_res.sort_values("sample_size", ascending=False).drop_duplicates("id")
+    logger.info(f"{len(df_res):,} Zeilen geladen.")
 
-    # --- Plot 1: Verteilung der Materialklassen nach Figurenanzahl ---
-    logger.info("Erstelle Histogramm der Materialklassen nach Figurenzahl...")
-    df_mat['num_pieces'] = df_mat['white'].apply(lambda x: len(eval(x))) + df_mat['black'].apply(lambda x: len(eval(x)))
-    plt.figure(figsize=(10,5))
-    plt.hist(df_mat['num_pieces'], bins=range(2,33), color='skyblue', edgecolor='black')
-    plt.xlabel("Anzahl Figuren (2-32)")
+    # --- Histogramm Anzahl Figuren pro Klasse ---
+    df_mat['num_pieces'] = df_mat['white'].apply(lambda x: sum(eval(x).values())) + \
+                           df_mat['black'].apply(lambda x: sum(eval(x).values()))
+    plt.figure(figsize=(10,6))
+    sns.histplot(df_mat['num_pieces'], bins=range(2,33), kde=False, color='skyblue')
+    plt.xlabel("Anzahl Figuren")
     plt.ylabel("Anzahl Materialklassen")
     plt.title("Verteilung der Materialklassen nach Figurenanzahl")
     plt.tight_layout()
-    plt.savefig("material_class_distribution.png", dpi=150)
+    plt.savefig("material_class_histogram.png", dpi=150)
+    logger.info("Histogramm der Materialklassen gespeichert: material_class_histogram.png")
     plt.close()
-    logger.info("Histogramm gespeichert: material_class_distribution.png")
 
-    # --- Plot 2: Positions vs weighted ---
-    logger.info("Erstelle Positions vs weighted Positions Plot...")
+    # --- Positions vs weighted ---
     df_plot = df_analysis.copy()
+    # Positions als float
     df_plot['positions_float'] = df_plot['positions'].astype(float)
-    df_plot['weighted_positions_float'] = df_plot['positions_float'] * df_plot['weighted_mean_ratio']
+    # Weighted estimated legal
+    df_plot['weighted_positions_float'] = df_plot['weighted_estimated_legal_str'].astype(float)
 
-    # Optionales Downsampling, falls zu groß
-    sample_step = max(1, len(df_plot)//5000)  # max 5000 Punkte für Plot
-    x_vals = df_plot['id'].iloc[::sample_step]
-    y_positions = df_plot['positions_float'].iloc[::sample_step]
-    y_weighted = df_plot['weighted_positions_float'].iloc[::sample_step]
-
-    plt.figure(figsize=(15,5))
-    plt.plot(x_vals, y_positions, color='blue', lw=1, label='Positions')
-    plt.plot(x_vals, y_weighted, color='red', lw=1, label='Positions * valid_factor')
+    plt.figure(figsize=(12,6))
+    plt.plot(df_plot['id'], df_plot['positions_float'], label='Positions', alpha=0.7)
+    plt.plot(df_plot['id'], df_plot['weighted_positions_float'], label='Positions * valid_factor', alpha=0.7)
     plt.xlabel("Materialklasse ID")
-    plt.ylabel("Anzahl Positionen")
-    plt.title("Positionen pro Materialklasse vs gewichtete Positionen")
+    plt.ylabel("Anzahl Stellungen")
+    plt.title("Anzahl Positionen pro Materialklasse")
     plt.legend()
     plt.tight_layout()
     plt.savefig("positions_vs_weighted.png", dpi=150)
-    plt.close()
     logger.info("Positions-Plot gespeichert: positions_vs_weighted.png")
-
-    # --- Plot 3: Max sample_size pro Klasse ---
-    logger.info("Erstelle Max sample_size pro Klasse Plot...")
-    x_vals = max_sample_df['id']
-    y_vals = max_sample_df['sample_size']
-
-    plt.figure(figsize=(15,5))
-    plt.plot(x_vals, y_vals, color='green', lw=1)
-    plt.xlabel("Materialklasse ID")
-    plt.ylabel("Max sample_size")
-    plt.title("Maximal berechnete Samplegröße pro Materialklasse")
-    plt.tight_layout()
-    plt.savefig("max_sample_size.png", dpi=150)
     plt.close()
-    logger.info("Max sample_size-Plot gespeichert: max_sample_size.png")
 
-    logger.info("✅ Alle Plots erstellt und gespeichert.")
+    # --- Max sample_size pro Klasse ---
+    df_max_sample = df_res.groupby('id')['sample_size'].max().reset_index()
+    plt.figure(figsize=(12,6))
+    plt.plot(df_max_sample['id'], df_max_sample['sample_size'], marker='o', linestyle='', markersize=2)
+    plt.xlabel("Materialklasse ID")
+    plt.ylabel("Maximal berechnetes Sample")
+    plt.title("Maximal berechnetes Sample pro Materialklasse")
+    plt.tight_layout()
+    plt.savefig("max_sample_per_class.png", dpi=150)
+    logger.info("Max Sample Size-Plot gespeichert: max_sample_per_class.png")
+    plt.close()
 
 if __name__ == "__main__":
     main()
