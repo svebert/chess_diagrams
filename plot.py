@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+8#!/usr/bin/env python3
 """
 plot.py
 
@@ -76,16 +76,17 @@ def main():
     logger.info("Positions-Plot gespeichert: positions_vs_weighted.png")
     plt.close()
 
-    # --- Max sample_size pro Klasse ---
+    # --- Max sample_size pro Klasse (logarithmisch) ---
     df_max_sample = df_res.groupby('id')['sample_size'].max().reset_index()
     plt.figure(figsize=(12,6))
     plt.plot(df_max_sample['id'], df_max_sample['sample_size'], marker='o', linestyle='', markersize=2)
     plt.xlabel("Materialklasse ID")
     plt.ylabel("Maximal berechnetes Sample")
-    plt.title("Maximal berechnetes Sample pro Materialklasse")
+    plt.title("Maximal berechnetes Sample pro Materialklasse (logarithmische Y-Achse)")
+    plt.yscale("log")  # logarithmische Skala
     plt.tight_layout()
-    plt.savefig("max_sample_per_class.png", dpi=150)
-    logger.info("Max Sample Size-Plot gespeichert: max_sample_per_class.png")
+    plt.savefig("max_sample_per_class_log.png", dpi=150)
+    logger.info("Max Sample Size-Plot (logarithmisch) gespeichert: max_sample_per_class_log.png")
     plt.close()
 
 if __name__ == "__main__":
