@@ -4,8 +4,7 @@ plot.py
 
 Erzeugt verschiedene Plots zu den Materialklassen und Legalitätsfaktoren:
 1. Histogramm der Anzahl Figuren pro Materialklasse.
-2. Positionen pro Materialklasse + gewichtet durch valid_ratio (logarithmische Y-Achse).
-   Klassen werden nach Anzahl Positionen sortiert für saubere Darstellung.
+2. Positionen pro Materialklasse + gewichtet durch valid_ratio (logarithmische Y-Achse, Scatter).
 3. Maximal sample_size pro Klasse.
 
 Optimiert für große DataFrames.
@@ -58,33 +57,31 @@ def main():
     logger.info("Histogramm der Materialklassen gespeichert: material_class_histogram.png")
     plt.close()
 
-    # --- Positions vs weighted (logarithmische Y-Achse, sortiert) ---
+    # --- Positions vs weighted (logarithmische Y-Achse, Scatter) ---
     df_plot = df_analysis.copy()
-    # Positions als float
     df_plot['positions_float'] = df_plot['positions'].astype(float)
-    # Weighted estimated legal
     df_plot['weighted_positions_float'] = df_plot['weighted_estimated_legal_str'].astype(float)
 
-    # Sortieren nach Positionsanzahl für glatteren Plot
+    # Sortieren nach Positionsanzahl für bessere Darstellung
     df_plot = df_plot.sort_values('positions_float').reset_index(drop=True)
 
     plt.figure(figsize=(12,6))
-    plt.plot(df_plot['id'], df_plot['positions_float'], label='Positions', alpha=0.7)
-    plt.plot(df_plot['id'], df_plot['weighted_positions_float'], label='Positions * valid_factor', alpha=0.7)
+    plt.scatter(df_plot['id'], df_plot['positions_float'], label='Positions', alpha=0.6, s=10)
+    plt.scatter(df_plot['id'], df_plot['weighted_positions_float'], label='Positions * valid_factor', alpha=0.6, s=10)
     plt.xlabel("Materialklasse ID (sortiert nach Positionen)")
     plt.ylabel("Anzahl Stellungen")
     plt.title("Anzahl Positionen pro Materialklasse (sortiert)")
-    plt.yscale("log")  # logarithmische Y-Achse
+    plt.yscale("log")
     plt.legend()
     plt.tight_layout()
     plt.savefig("positions_vs_weighted.png", dpi=150)
-    logger.info("Positions-Plot gespeichert: positions_vs_weighted.png")
+    logger.info("Positions-Scatter-Plot gespeichert: positions_vs_weighted.png")
     plt.close()
 
     # --- Max sample_size pro Klasse ---
     df_max_sample = df_res.groupby('id')['sample_size'].max().reset_index()
     plt.figure(figsize=(12,6))
-    plt.plot(df_max_sample['id'], df_max_sample['sample_size'], marker='o', linestyle='', markersize=2)
+    plt.scatter(df_max_sample['id'], df_max_sample['sample_size'], s=10)
     plt.xlabel("Materialklasse ID")
     plt.ylabel("Maximal berechnetes Sample")
     plt.title("Maximal berechnetes Sample pro Materialklasse")
@@ -95,4 +92,3 @@ def main():
 
 if __name__ == "__main__":
     main()
- 
