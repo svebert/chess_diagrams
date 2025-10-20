@@ -4,7 +4,7 @@ plot.py
 
 Erzeugt verschiedene Plots zu den Materialklassen und Legalitätsfaktoren:
 1. Histogramm der Anzahl Figuren pro Materialklasse.
-2. Positionen pro Materialklasse + gewichtet durch valid_ratio.
+2. Positionen pro Materialklasse + gewichtet durch valid_ratio (nur valid_ratio != 1).
 3. Maximal sample_size pro Klasse.
 
 Optimiert für große DataFrames.
@@ -56,25 +56,28 @@ def main():
     logger.info("Histogramm der Materialklassen gespeichert: material_class_histogram.png")
     plt.close()
 
-    # --- Positions vs weighted (sortiert, Punkte) ---
+    # --- Positions vs weighted (sortiert, Punkte, nur valid_ratio != 1) ---
     df_plot = df_analysis.copy()
     df_plot['positions_float'] = df_plot['positions'].astype(float)
     df_plot['weighted_positions_float'] = df_plot['weighted_estimated_legal_str'].astype(float)
+
+    # Filter: nur valid_ratio != 1
+    df_plot = df_plot[df_plot['weighted_positions_float'] != df_plot['positions_float']]
 
     # Sortieren nach Positionsanzahl
     df_plot = df_plot.sort_values('positions_float').reset_index(drop=True)
 
     plt.figure(figsize=(12,6))
     plt.scatter(range(len(df_plot)), df_plot['positions_float'], label='Positions', alpha=0.7, s=10)
-    plt.scatter(range(len(df_plot)), df_plot['weighted_positions_float'], label='Positions * valid_factor', alpha=0.7, s=10)
+    plt.scatter(range(len(df_plot)), df_plot['weighted_positions_float'], label='Positions * valid_factor', alpha=0.7, s=10, color='orange')
     plt.xlabel("Materialklasse (sortiert nach Positionsanzahl)")
     plt.ylabel("Anzahl Stellungen")
-    plt.title("Anzahl Positionen pro Materialklasse (sortiert)")
+    plt.title("Anzahl Positionen pro Materialklasse (berechnet)")
     plt.legend()
-    plt.yscale('log')  # optional logarithmisch, wenn gewünscht
+    plt.yscale('log')  # optional logarithmisch
     plt.tight_layout()
-    plt.savefig("positions_vs_weighted_sorted.png", dpi=150)
-    logger.info("Positions-Plot gespeichert: positions_vs_weighted_sorted.png")
+    plt.savefig("positions_vs_weighted_sorted_filtered.png", dpi=150)
+    logger.info("Positions-Plot gespeichert: positions_vs_weighted_sorted_filtered.png")
     plt.close()
 
     # --- Max sample_size pro Klasse ---
