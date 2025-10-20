@@ -76,7 +76,7 @@ def compute_ratios(df_mat, df_res):
     stats_rows = []
     ids = df_mat["id"].tolist()
     logger.info("Hole largest-sample valid_ratio pro Klasse...")
-    for cid in tqdm(ids, desc="Largest sample ratios", ncols=100):
+    for cid in tqdm(ids, desc="Largest sample ratios", ncols=100, dynamic_ncols=True, leave=False, ascii=True):
         if len(df_res) == 0 or cid not in grouped.groups:
             stats_rows.append((cid, 1.0))
         else:
@@ -92,7 +92,7 @@ def compute_ratios(df_mat, df_res):
 
 def compute_weighted_estimates(df_final):
     logger.info("Konvertiere 'positions' zu Decimal für Referenz und float für Fast Sum ...")
-    positions_decimal = [safe_to_decimal(x) for x in tqdm(df_final["positions"], desc="Positions -> Decimal", ncols=100)]
+    positions_decimal = [safe_to_decimal(x) for x in tqdm(df_final["positions"], desc="Positions -> Decimal", ncols=100, dynamic_ncols=True, leave=False, ascii=True)]
     df_final["positions_decimal"] = [str(x) for x in positions_decimal]
 
     positions_float = np.array([float(x) for x in positions_decimal], dtype=np.float64)
