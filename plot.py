@@ -63,28 +63,31 @@ def plot_hist_num_pieces(df_mat):
     logger.info(f"Histogram saved: {OUT_HIST_NUM_PIECES}")
     plt.close()
 
-
 def plot_positions_sorted(df_analysis):
+    """
+    Plot positions per material class, sorted by positions.
+    Only include calculated classes (valid_ratio < 1).
+    Logarithmic y-axis. No y-axis limits.
+    """
     df_plot = df_analysis.copy()
+    # Positions as float
     df_plot['positions_float'] = df_plot['positions'].astype(float)
     df_plot['weighted_positions_float'] = df_plot['weighted_estimated_legal_str'].astype(float)
-
-    # Only plot entries with valid_ratio < 1
-    df_plot = df_plot[df_plot['weighted_positions_float'] < df_plot['positions_float']]
-
+    
+    # Only include calculated classes
+    df_plot = df_plot[df_plot['weighted_positions_float'] != df_plot['positions_float']]
+    
     # Sort by positions
     df_plot = df_plot.sort_values('positions_float').reset_index(drop=True)
 
     plt.figure(figsize=(12,6))
-    plt.scatter(range(len(df_plot)), df_plot['positions_float'], label=r'$\mathcal{P}$', alpha=0.7, s=10)
-    plt.scatter(range(len(df_plot)), df_plot['weighted_positions_float'], label=r'$\mathcal{P}_{\mathrm{valid}}$', alpha=0.7, s=10, color='orange')
-    plt.xlabel("Material Class (sorted by positions)")
-    plt.ylabel("Number of Positions")
-    plt.title("Number of Positions per Material Class (calculated)")
+    plt.scatter(range(len(df_plot)), df_plot['positions_float'], label=r'$\mathrm{Positions}$', alpha=0.7, s=10, color='blue')
+    plt.scatter(range(len(df_plot)), df_plot['weighted_positions_float'], label=r'$\mathrm{Positions \cdot valid\_ratio}$', alpha=0.7, s=10, color='orange')
+    plt.xlabel("Material class (sorted by positions)")
+    plt.ylabel("Number of positions")
+    plt.title("Number of positions per material class (calculated)")
     plt.yscale('log')
-    plt.ylim(1e-4, 1e0)
-    plt.yticks([1e-3,1e-2,1e-1,1e0], ['10$^{-3}$','10$^{-2}$','10$^{-1}$','10$^{0}$'])
-    plt.grid(True, axis='both', linestyle='--', alpha=0.5)
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5)
     plt.legend()
     plt.tight_layout()
     plt.savefig(OUT_POS_SORTED, dpi=150)
@@ -141,30 +144,34 @@ def plot_valid_ratio_sorted(df_analysis):
     plt.close()
 
 
-def plot_positions_per_num_pieces(df_analysis, df_mat):
-    """Plot sum of positions per number of pieces (log y-axis)"""
+def plot_positions_per_num_pieces(df_analysis):
+    """
+    Plot total positions per number of pieces, binned.
+    Include both raw positions and positions scaled by valid_ratio.
+    Logarithmic y-axis. 
+    """
     df_plot = df_analysis.copy()
     df_plot['positions_float'] = df_plot['positions'].astype(float)
     df_plot['weighted_positions_float'] = df_plot['weighted_estimated_legal_str'].astype(float)
-
-    # Only entries with valid_ratio < 1
-    df_plot = df_plot[df_plot['weighted_positions_float'] < df_plot['positions_float']]
-
-    # Add number of pieces
-    df_mat['num_pieces'] = df_mat['white'].apply(lambda x: sum(eval(x).values())) + \
-                           df_mat['black'].apply(lambda x: sum(eval(x).values()))
-    df_plot = df_plot.merge(df_mat[['id','num_pieces']], on='id', how='left')
-
-    # Group by number of pieces, sum positions
-    grouped = df_plot.groupby('num_pieces')['positions_float'].sum().reset_index()
-
+    df_plot['num_pieces'] = df_plot['white'].apply(lambda x: sum(eval(x).values())) + \
+                             df_plot['black'].apply(lambda x: sum(eval(x).values()))
+    
+    # Only consider classes where valid_ratio < 1 for weighted
+    df_weighted = df_plot[df_plot['weighted_positions_float'] != df_plot['positions_float']]
+    
+    # Aggregate per number of pieces
+    agg_positions = df_plot.groupby('num_pieces')['positions_float'].sum()
+    agg_weighted = df_weighted.groupby('num_pieces')['weighted_positions_float'].sum()
+    
     plt.figure(figsize=(10,6))
-    plt.scatter(grouped['num_pieces'], grouped['positions_float'], s=50, color='skyblue', alpha=0.7)
-    plt.xlabel("Number of Pieces")
-    plt.ylabel("Total Positions")
-    plt.title("Sum of Positions per Number of Pieces (only calculated)")
+    plt.scatter(agg_positions.index, agg_positions.values, label=r'$\mathrm{Positions}$', color='blue', s=40)
+    plt.scatter(agg_weighted.index, agg_weighted.values, label=r'$\mathrm{Positions \cdot valid\_ratio}$', color='orange', s=40)
+    plt.xlabel("Number of pieces")
+    plt.ylabel("Number of positions")
+    plt.title("Total positions per number of pieces")
     plt.yscale('log')
-    plt.grid(True, axis='both', linestyle='--', alpha=0.5)
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+    plt.legend()
     plt.tight_layout()
     plt.savefig(OUT_POS_PER_NUM_PIECES, dpi=150)
     logger.info(f"Positions per number of pieces plot saved: {OUT_POS_PER_NUM_PIECES}")
