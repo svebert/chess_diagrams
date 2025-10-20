@@ -1,10 +1,10 @@
-8#!/usr/bin/env python3
+ #!/usr/bin/env python3
 """
 plot.py
 
 Erzeugt verschiedene Plots zu den Materialklassen und Legalitätsfaktoren:
 1. Histogramm der Anzahl Figuren pro Materialklasse.
-2. Positionen pro Materialklasse + gewichtet durch valid_ratio.
+2. Positionen pro Materialklasse + gewichtet durch valid_ratio (logarithmische Y-Achse).
 3. Maximal sample_size pro Klasse.
 
 Optimiert für große DataFrames.
@@ -57,7 +57,7 @@ def main():
     logger.info("Histogramm der Materialklassen gespeichert: material_class_histogram.png")
     plt.close()
 
-    # --- Positions vs weighted ---
+    # --- Positions vs weighted (logarithmische Y-Achse) ---
     df_plot = df_analysis.copy()
     # Positions als float
     df_plot['positions_float'] = df_plot['positions'].astype(float)
@@ -70,24 +70,25 @@ def main():
     plt.xlabel("Materialklasse ID")
     plt.ylabel("Anzahl Stellungen")
     plt.title("Anzahl Positionen pro Materialklasse")
+    plt.yscale("log")  # logarithmische Y-Achse
     plt.legend()
     plt.tight_layout()
     plt.savefig("positions_vs_weighted.png", dpi=150)
     logger.info("Positions-Plot gespeichert: positions_vs_weighted.png")
     plt.close()
 
-    # --- Max sample_size pro Klasse (logarithmisch) ---
+    # --- Max sample_size pro Klasse ---
     df_max_sample = df_res.groupby('id')['sample_size'].max().reset_index()
     plt.figure(figsize=(12,6))
     plt.plot(df_max_sample['id'], df_max_sample['sample_size'], marker='o', linestyle='', markersize=2)
     plt.xlabel("Materialklasse ID")
     plt.ylabel("Maximal berechnetes Sample")
-    plt.title("Maximal berechnetes Sample pro Materialklasse (logarithmische Y-Achse)")
-    plt.yscale("log")  # logarithmische Skala
+    plt.title("Maximal berechnetes Sample pro Materialklasse")
     plt.tight_layout()
-    plt.savefig("max_sample_per_class_log.png", dpi=150)
-    logger.info("Max Sample Size-Plot (logarithmisch) gespeichert: max_sample_per_class_log.png")
+    plt.savefig("max_sample_per_class.png", dpi=150)
+    logger.info("Max Sample Size-Plot gespeichert: max_sample_per_class.png")
     plt.close()
 
 if __name__ == "__main__":
     main()
+    
