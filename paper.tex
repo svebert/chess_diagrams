@@ -32,7 +32,7 @@
 \maketitle
 
 \begin{abstract}
-Determining the exact number of legal chess diagrams remains an open problem. This paper presents a statistical approach based on material classes and Monte Carlo simulations to estimate the number of legal diagrams. We define material classes, explain their enumeration, and demonstrate how random sampling can yield approximate legal ratios for each class.
+The total number of legal chess diagrams remains unknown due to the immense combinatorial complexity of chess and the difficulty of verifying legality/ reachability. This work presents a Monte Carlo–based estimation approach that operates on the level of material classes—distinct configurations of piece counts. For each class, random diagrams are generated and tested for structural legality using the \texttt{python-chess} library. By combining combinatorial enumeration of diagrams within each class with empirically estimated valid ratios, an overall upper bound for the number of legal chess diagrams without promotions is derived. Our results suggest an upper bound of approximately $2.3\times10^{40}$ legal diagrams, corresponding to roughly one in every five hundred random piece placements being structurally legal. These findings provide a more granular perspective on the distribution of legality across material classes and offer a foundation for future refinements toward reachable position estimation.
 \end{abstract}
 
 \section{Introduction and Motivation}
@@ -353,7 +353,15 @@ Figure \ref{fig:legal_ratio_by_pieces} shows the average legal ratio over the nu
 
 Finally figure \ref{fig:diagrams_by_pieces} shows the number of total and legal diagrams over the number of chess pieces. Interestingly we find the maximum of legal diagrams for 31 pieces and not 32, like for the total number of diagrams.
 
+\section{Summary and Conclusion}
 
+This study demonstrates that Monte Carlo simulations can provide meaningful statistical estimates for the otherwise intractable problem of enumerating legal chess diagrams. By decomposing the search space into well-defined material classes and applying legality checks on sampled diagrams, we approximate the total number of structurally valid configurations to be on the order of $10^{40}$.
+
+The data reveal strong variations in the legality ratio across material classes and a systematic decline for positions with a high total number of pieces, especially near the full 32-piece configuration. This indicates that illegalities such as invalid pawn placements and conflicting king states dominate in dense positions.
+
+Our findings also highlight that only a small subset of material classes significantly contributes to the global count — primarily those with near-complete sets of pieces. This observation suggests a strategy for future refinements: focus computational effort on high-impact material classes while applying statistical interpolation for the rest.
+
+While this work excludes promotions and reachability constraints, it provides a scalable foundation for estimating the space of \emph{legal} (but not necessarily \emph{reachable}) chess diagrams. Extending the method to include promoted pieces, bishop color and pawn structure constraints represents a promising direction for further research.
 
 \section{References}
 
