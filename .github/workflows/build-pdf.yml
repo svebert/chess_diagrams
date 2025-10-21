@@ -1,45 +1,30 @@
-name: Build LaTeX PDF
+name: Build LaTeX PDF on PR
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
-    branches:
-      - main
+    types: [opened, synchronize, reopened]
 
 jobs:
   build:
-    name: Build PDF
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout Repository
+      # 1️⃣ Checkout PR branch
       - name: Checkout PR branch
         uses: actions/checkout@v3
         with:
           ref: ${{ github.head_ref }}
-          token: ${{ secrets.GITHUB_TOKEN }}  # wichtig für Push
 
-      # 2️⃣ Install LaTeX
-      - name: Install TeX Live
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y texlive-latex-base texlive-latex-extra texlive-fonts-recommended texlive-fonts-extra
-
-      # 3️⃣ Build PDF
+      # 2️⃣ Build PDF using LaTeX Action
       - name: Compile paper.tex
-        run: |
-          pdflatex -interaction=nonstopmode paper.tex
-          pdflatex -interaction=nonstopmode paper.tex  # twice for references
+        uses: xu-cheng/latex-action@v2
+        with:
+          root_file: paper.tex
+          compiler: pdflatex
 
-      # 4️⃣ Commit and push PDF if changed
-      - name: Commit PDF
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add paper.pdf
-          git diff --cached --quiet || git commit -m "Update compiled paper.pdf [skip ci]"
-          git push origin HEAD:${{ github.head_ref }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # 3️⃣ Upload the compiled PDF as artifact
+      - name: Upload PDF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: paper-pdf
+          path: paper.pdf

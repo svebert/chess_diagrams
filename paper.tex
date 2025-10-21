@@ -76,7 +76,7 @@ All diagrams & All possible placements of pieces on the board, ignoring any lega
 & $\sim 10^{43}$ \cite{shannon1950} \\[0.3em]
 
 Legal diagrams & Diagrams satisfying chess rules (e.g., exactly one king per side, no pawns on rank~1 or~8) without promotions 
-& $\approx 1,5\times10^{40}$ \cite{steinerberger2015} $\approx 2.9\times10^{39}$ \cite{tromp2021b} 4\times 10^{37} \cite{gourion2021} \\[0.3em]
+& $\approx 1,5\times10^{40}$ \cite{steinerberger2015} $\approx 2.9\times10^{39}$ \cite{tromp2021b} $4\times 10^{37}$ \cite{gourion2021} \\[0.3em]
 
 Legal positions & Legal diagrams with additional information including side to move, castling rights and en~passant possibilities. 
 & $\approx (1.78\pm0.04)\times10^{46}$ \cite{chinchalkar1996} , $\approx (4.8\pm0.04)\times10^{44}$ \cite{tromp2021b} \\[0.3em]
@@ -104,21 +104,22 @@ We define a \emph{material class} as a set of specific chess pieces. Each materi
 \subsubsection{Analytical Calculation}
 
 The number of different material classes can be computed as follows: 
-For a single side, the total number of possible piece count combinations with no promotions (limits: $K = 1, Q \le 1, R \le 2, B \le 2, N \le 2, P \le 8$) is:
-\[
-\text{num_combinations} = (K) × (Q + 1) \cross (R + 1) \cross (B + 1) \cross (N + 1) \cross (P + 1)
+For a single side, the total number of possible piece count combinations with no promotions 
+(limits: $K = 1, Q \le 1, R \le 2, B \le 2, N \le 2, P \le 8$) is:
 
-\]
-Substituting the limits:
 \[
-1 \cdot (1 + 1) \cdot (2 + 1) \cdot (2 + 1) \cdot (2 + 1) \cdot (8 + 1) = 486.
+\text{num\_combinations} = (K) \cdot (Q + 1) \cdot (R + 1) \cdot (B + 1) \cdot (N + 1) \cdot (P + 1)
 \]
 
-Since white’s and black’s piece counts are independent, the total number of
+\[
+1 \cdot (1 + 1) \cdot (2 + 1) \cdot (2 + 1) \cdot (2 + 1) \cdot (8 + 1) = 486
+\]
 
+Since white's and black's piece counts are independent, the total number of
 combined material classes is:
+
 \[
-486^2 = 236{,}196.
+486^2 = 236{,}196
 \]
 
 \subsubsection{Python Implementation}
@@ -167,7 +168,7 @@ from 0 to 9, representing promotions to multiple queens.
   \caption{Distribution of the count of different material classes for chess pieces count of 2-32}
   \label{fig:material_class_hist}
 \end{figure}
-In figure \{fig:material_class_hist} the distribution of different material classes over the number of chess pieces is shown.
+In figure \ref{fig:material_class_hist} the distribution of different material classes over the number of chess pieces is shown.
 \subsection{Diagram Enumeration Within a Material Class}
 
 The total number of ways to distribute the given pieces of a material class over 64 squares (ignoring legality) can be expressed combinatorially as:
