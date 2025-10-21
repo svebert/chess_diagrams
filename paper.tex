@@ -47,7 +47,7 @@ $64! / (32! \, 8!^2 \, 2!^6)$, or roughly $10^{43}$.''
 \end{quote}
 
 This statement originates from Shannon’s foundational 1950 paper. His work focused primarily on the complexity of chess as a game rather than the enumeration of strictly legal positions. 
-Modern studies like \cite{chinchalker1996} found an upper bound for the maximum legal chess positions by basic combinatoric and applying restrictions based on chess rules. In 2015 Steinerberger \cite{steinnerberger2015} proposed an upper bound for legal diagrams by incorporating the color-lock restriction of bishop. He additionally conjectures that an upper bound of $\times10^{35}$ for legal diagrams, if one could incorporate only legal pawn structures. Additionally he suggests a Monte Carlo approach to find a tighter upper bound.
+Modern studies like \cite{chinchalkar1996} found an upper bound for the maximum legal chess positions by basic combinatoric and applying restrictions based on chess rules. In 2015 Steinerberger \cite{steinerberger2015} proposed an upper bound for legal diagrams by incorporating the color-lock restriction of bishop. He additionally conjectures that an upper bound of $\times10^{35}$ for legal diagrams, if one could incorporate only legal pawn structures. Additionally he suggests a Monte Carlo approach to find a tighter upper bound.
 2021 Tromp \cite{tromp2021b} implemented a Monte Carlo approach and estimated with 1 Mio samples the upper bound of legal positions (he calls them Ur positions) to $\times10^{44}$. It is not clear to the author, if the approach is restricted to games without promotions or not. 
 Due to the immense combinatorial explosion, exact enumeration remains computationally infeasible. Incorporating all chess rules in a combinatoric deduction of the upper count of legal diagrams or positions seems to be way too complex. Monte Carlo sampling is currently the most practical approach.
 
@@ -99,7 +99,7 @@ In this paper we try a similar approach like Tromp \cite{tromp2021b}, however we
 
 \subsection{Material Classes}
 
-We define a \emph{material class} as a set of specific chess pieces. Each material class specifies the number of kings $K$, queens $Q$, rooks $R$, bishops $B$, knights $K$, and pawns $P$ present for white and black.
+We define a \emph{material class} as a set of specific chess pieces. Each material class specifies the number of kings $K$, queens $Q$, rooks $R$, bishops $B$, knights $N$, and pawns $P$ present for white and black.
 
 \subsubsection{Analytical Calculation}
 
@@ -168,7 +168,7 @@ from 0 to 9, representing promotions to multiple queens.
   \caption{Distribution of the count of different material classes for chess pieces count of 2-32}
   \label{fig:material_class_hist}
 \end{figure}
-In figure \ref{fig:material_class_hist} the distribution of different material classes over the number of chess pieces is shown.
+Figure \ref{fig:material_class_hist} shows the distribution of different material classes over the number of chess pieces.
 \subsection{Diagram Enumeration Within a Material Class}
 
 The total number of ways to distribute the given pieces of a material class over 64 squares (ignoring legality) can be expressed combinatorially as:
@@ -332,7 +332,7 @@ When compared to the total number of all possible diagrams (i.e., all unconstrai
 This indicates that fewer than one in every five hundred random piece configurations satisfies even the basic structural rules of chess, stated above.
 The valid ratio~$r_m$ is, however, \emph{not constant} across material classes: positions with a small number of pieces (e.g., king and pawns only) or heavily asymmetrical material distributions exhibit a higher probability of structural legality, while classes with many pieces or numerous pawns show significantly lower ratios due to increased likelihood of overlapping or invalid pawn placements.
 
-These results represent an upper bound, as the legality checks performed do not include color-complex restrictions for bishops or reachability constraints based on move sequences. The legality check does also not include unreachable pawn patterns, like more than 4 prawns in one column or unreachable side-pawn patterns \cite{mcdonagh2022}.
+These results represent an upper bound, as the legality checks performed do not include color-complex restrictions for bishops or reachability constraints based on move sequences. The legality check does also not include unreachable pawn patterns, like more than 4 pawns in one column or unreachable side-pawn patterns \cite{mcdonagh2022}.
 
 \begin{figure}[h!]
   \centering
