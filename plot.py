@@ -6,10 +6,10 @@ Erzeugt verschiedene Plots zu den Materialklassen und Legalitätsfaktoren.
 
 Plots:
 1. Histogram of number of pieces per material class.
-2. Positions per material class (sorted, points, only calculated classes).
+2. Diagrams per material class (sorted, points, only calculated classes).
 3. Maximal sample size per class.
 4. Valid ratio per class (sorted, points, only calculated classes).
-5. Sum of positions per number of pieces (binned, log y-axis, only calculated).
+5. Sum of diagrams per number of pieces (binned, log y-axis, only calculated).
 6. Weighted valid ratio per number of pieces (binned, log y-axis, only calculated).
 
 All plots are optimized for large DataFrames. Only classes with valid_ratio < 1
@@ -65,7 +65,7 @@ def plot_hist_num_pieces(df_mat):
 
 def plot_positions_sorted(df_analysis):
     """
-    Plot positions per material class, sorted by positions.
+    Plot diagrams per material class, sorted by total diagram count.
     Only include calculated classes (valid_ratio < 1).
     Logarithmic y-axis. No y-axis limits.
     """
@@ -81,11 +81,11 @@ def plot_positions_sorted(df_analysis):
     df_plot = df_plot.sort_values('positions_float').reset_index(drop=True)
 
     plt.figure(figsize=(12,6))
-    plt.scatter(range(len(df_plot)), df_plot['positions_float'], label=r'$\mathrm{Positions}$', alpha=0.7, s=10, color='blue')
-    plt.scatter(range(len(df_plot)), df_plot['weighted_positions_float'], label=r'$\mathrm{Positions \cdot valid\_ratio}$', alpha=0.7, s=10, color='orange')
+    plt.scatter(range(len(df_plot)), df_plot['positions_float'], label=r'$\mathrm{Diagrams}$', alpha=0.7, s=10, color='blue')
+    plt.scatter(range(len(df_plot)), df_plot['weighted_positions_float'], label=r'$\mathrm{Diagrams \cdot legal\_ratio}$', alpha=0.7, s=10, color='orange')
     plt.xlabel("Material class (sorted by positions)")
-    plt.ylabel("Number of positions")
-    plt.title("Number of positions per material class (calculated)")
+    plt.ylabel("Number of diagrams")
+    plt.title("Number of diagrams per material class (calculated)")
     plt.yscale('log')
     plt.grid(True, which='both', linestyle='--', linewidth=0.5)
     plt.legend()
@@ -130,9 +130,9 @@ def plot_valid_ratio_sorted(df_analysis):
     plt.scatter(range(len(df_plot)), df_plot['valid_ratio'], s=10, alpha=0.7)
     plt.axhline(avg_ratio, color='red', linestyle='--', label=r'$\bar{r}$')
     plt.axhline(weighted_avg_ratio, color='green', linestyle='--', label=r'$\bar{r}_w$')
-    plt.xlabel("Material Class (sorted by positions)")
-    plt.ylabel("Valid Ratio")
-    plt.title("Valid Ratio per Material Class")
+    plt.xlabel("Material Class (sorted by total diagram count)")
+    plt.ylabel("Legal Ratio")
+    plt.title("Legal Ratio per Material Class")
     plt.yscale('log')
     plt.ylim(1e-4, 1e0)
     plt.yticks([1e-3,1e-2,1e-1,1e0], ['10$^{-3}$','10$^{-2}$','10$^{-1}$','10$^{0}$'])
@@ -140,14 +140,14 @@ def plot_valid_ratio_sorted(df_analysis):
     plt.legend()
     plt.tight_layout()
     plt.savefig(OUT_VALID_RATIO_SORTED, dpi=150)
-    logger.info(f"Valid ratio plot saved: {OUT_VALID_RATIO_SORTED}")
+    logger.info(f"Legal ratio plot saved: {OUT_VALID_RATIO_SORTED}")
     plt.close()
 
 
 def plot_positions_per_num_pieces(df_analysis):
     """
-    Plot total positions per number of pieces, binned.
-    Include both raw positions and positions scaled by valid_ratio.
+    Plot total diagrams per number of pieces, binned.
+    Include both raw diagrams and diagrams scaled by valid_ratio.
     Logarithmic y-axis. 
     """
     df_plot = df_analysis.copy()
@@ -164,22 +164,22 @@ def plot_positions_per_num_pieces(df_analysis):
     agg_weighted = df_weighted.groupby('num_pieces')['weighted_positions_float'].sum()
     
     plt.figure(figsize=(10,6))
-    plt.scatter(agg_positions.index, agg_positions.values, label=r'$\mathrm{Positions}$', color='blue', s=40)
-    plt.scatter(agg_weighted.index, agg_weighted.values, label=r'$\mathrm{Positions \cdot valid\_ratio}$', color='orange', s=40)
+    plt.scatter(agg_positions.index, agg_positions.values, label=r'$\mathrm{Diagrams}$', color='blue', s=40)
+    plt.scatter(agg_weighted.index, agg_weighted.values, label=r'$\mathrm{Diagrams \cdot legal\_ratio}$', color='orange', s=40)
     plt.xlabel("Number of pieces")
-    plt.ylabel("Number of positions")
-    plt.title("Total positions per number of pieces")
+    plt.ylabel("Number of diagramss")
+    plt.title("Total diagrams per number of pieces")
     plt.yscale('log')
     plt.grid(True, which='both', linestyle='--', linewidth=0.5)
     plt.legend()
     plt.tight_layout()
     plt.savefig(OUT_POS_PER_NUM_PIECES, dpi=150)
-    logger.info(f"Positions per number of pieces plot saved: {OUT_POS_PER_NUM_PIECES}")
+    logger.info(f"Diagramss per number of pieces plot saved: {OUT_POS_PER_NUM_PIECES}")
     plt.close()
 
 
 def plot_valid_ratio_per_num_pieces(df_analysis, df_mat):
-    """Plot weighted valid_ratio per number of pieces (log y-axis)"""
+    """Plot weighted legal_ratio per number of pieces (log y-axis)"""
     df_plot = df_analysis.copy()
     df_plot['positions_float'] = df_plot['positions'].astype(float)
     df_plot['weighted_positions_float'] = df_plot['weighted_estimated_legal_str'].astype(float)
@@ -207,8 +207,8 @@ def plot_valid_ratio_per_num_pieces(df_analysis, df_mat):
     plt.axhline(avg_ratio, color='red', linestyle='--', label=r'$\bar{r}$')
     plt.axhline(weighted_avg_ratio, color='green', linestyle='--', label=r'$\bar{r}_w$')
     plt.xlabel("Number of Pieces")
-    plt.ylabel("Weighted Valid Ratio")
-    plt.title("Weighted Valid Ratio per Number of Pieces")
+    plt.ylabel("Weighted Legal Ratio")
+    plt.title("Weighted Legal Ratio per Number of Pieces")
     plt.yscale('log')
     plt.ylim(1e-4, 1e0)
     plt.yticks([1e-3,1e-2,1e-1,1e0], ['10$^{-3}$','10$^{-2}$','10$^{-1}$','10$^{0}$'])
@@ -216,7 +216,7 @@ def plot_valid_ratio_per_num_pieces(df_analysis, df_mat):
     plt.legend()
     plt.tight_layout()
     plt.savefig(OUT_VALID_RATIO_PER_NUM_PIECES, dpi=150)
-    logger.info(f"Weighted valid ratio per number of pieces plot saved: {OUT_VALID_RATIO_PER_NUM_PIECES}")
+    logger.info(f"Weighted legal ratio per number of pieces plot saved: {OUT_VALID_RATIO_PER_NUM_PIECES}")
     plt.close()
 
 
