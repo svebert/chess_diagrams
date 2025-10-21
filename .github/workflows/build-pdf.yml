@@ -20,7 +20,8 @@ jobs:
         uses: xu-cheng/latex-action@v2
         with:
           root_file: paper.tex
-          compiler: pdflatex
+          latexmk_use_lualatex: false
+          latexmk_shell_escape: true
 
       # 3️⃣ Upload the compiled PDF as artifact
       - name: Upload PDF artifact
