@@ -319,6 +319,42 @@ The valid ratio~$r_m$ is, however, \emph{not constant} across material classes: 
 
 These results represent an upper bound, as the legality checks performed do not include color-complex restrictions for bishops or reachability constraints based on move sequences. The legality check does also not include unreachable pawn patterns, like more than 4 prawns in one column or unreachable side-pawn patterns \cite{mcdonagh2022}.
 
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.6\textwidth]{positions_per_class.png}
+  \caption{Count of diagrams and legal diagrams over the rank of each material class. The rank of a classes is defined by sorting by the number of all diagrams of the classes.}
+  \label{fig:diagrams_per_class}
+\end{figure}
+In \ref{fig:diagrams_per_class} one may observe, that only very few of material classes have a huge impact on the total number of possible (legal) diagrams. Therefore it would be sufficient to only analyze these classes to come up with a good approximation of the stated upper bound for legal diagrams. The noise in the legal diagrams line, is probably due to the statistical approach and a too small sample size. However, we also expect a variation as the true legal ratio may fluctuate between material classes with adjacent rank.
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.6\textwidth]{valid_ratio_per_class.png}
+  \caption{Legal ratio over the rank of material classes.}
+  \label{fig:legal_ratio_by_class}
+\end{figure}
+
+The figure \ref{fig:diagrams_per_class} shows the legal ratio over all classes, with classes sorted in the same way, as in figure \ref{fig:diagrams_per_class}. One may observe a noisy variation of the legal ratio in dependence of the material class. There is also a systematic drift, with low ratio for classes with high rank. Meaning the fraction of illegal diagrams is higher for classes with large counts of different diagrams.
+
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.6\textwidth]{valid_ratio_per_num_pieces.png}
+  \caption{Average Legal ratio over number of chess pieces}
+  \label{fig:legal_ratio_by_pieces}
+\end{figure}
+Figure \ref{fig:legal_ratio_by_pieces} shows the average legal ratio over the number of chess pieces. One observes, that the lowest fraction of legal diagrams can be found for 32 pieces. This indicates again, that for solving the problem of finding an upper bound for legal diagrams or positions, analyzing games with high number of pieces is most important.
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=0.6\textwidth]{positions_per_num_pieces.png}
+  \caption{Average (legal) diagrams ratio over number of chess pieces}
+  \label{fig:diagrams_by_pieces}
+\end{figure}
+
+Finally figure \ref{fig:diagrams_by_pieces} shows the number of total and legal diagrams over the number of chess pieces. Interestingly we find the maximum of legal diagrams for 31 pieces and not 32, like for the total number of diagrams.
+
+
+
 \section{References}
 
 \begin{thebibliography}{9}
