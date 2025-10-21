@@ -13,7 +13,7 @@ jobs:
     steps:
       # 1️⃣ Checkout PR branch
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: xu-cheng/latex-action@v2
         with:
           ref: ${{ github.head_ref }}
 
