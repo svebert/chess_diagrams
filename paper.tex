@@ -106,18 +106,15 @@ We define a \emph{material class} as a set of specific chess pieces. Each materi
 The number of different material classes can be computed as follows: 
 For a single side, the total number of possible piece count combinations with no promotions (limits: $K = 1, Q \le 1, R \le 2, B \le 2, N \le 2, P \le 8$) is:
 \[
-\text{num_combinations} = (K) × (Q + 1) \cross (R + 1) \cross (B + 1) \cross (N + 1) \cross (P + 1)
-\]
-Substituting the limits:
-\[
-1 \cdot (1 + 1) \cdot (2 + 1) \cdot (2 + 1) \cdot (2 + 1) \cdot (8 + 1) = 486.
+\text{num_combinations} = (K) \cdot (Q + 1) \cdot (R + 1) \cdot (B + 1) \cdot (N + 1) \cdot (P + 1)
 \]
 
-Since white’s and black’s piece counts are independent, the total number of
-
-combined material classes is:
 \[
-486^2 = 236{,}196.
+1 \cdot (1 + 1) \cdot (2 + 1) \cdot (2 + 1) \cdot (2 + 1) \cdot (8 + 1) = 486
+\]
+Since white’s and black’s piece counts are independent, the total number of combined material classes is:
+\[
+486^2 = 236{,}196
 \]
 
 \subsubsection{Python Implementation}
