@@ -164,7 +164,7 @@ from 0 to 9, representing promotions to multiple queens.
 
 \begin{figure}[h!]
   \centering
-  \includegraphics[width=0.7\textwidth]{material_class_histogram.png}
+  \includegraphics[width=0.8\textwidth]{material_class_histogram.png}
   \caption{Distribution of the count of different material classes for chess pieces count of 2-32}
   \label{fig:material_class_hist}
 \end{figure}
@@ -180,11 +180,11 @@ The total number of ways to distribute the given pieces of a material class over
 where:
 \begin{itemize}
 \item $n_w$ and $n_b$ denote the number of white and black pieces, respectively,
-\item $c_i$ denotes the count of identical pieces (e.g., two rooks, eight pawns).
+\item $c_i$ denotes the count of identical pieces (e.g., two white rooks, eight black pawns).
 \end{itemize}
 
 \paragraph{Combinatorial Derivation.}
-Let \(n_w\) denote the number of white pieces and \(n_b\) the number of black pieces, giving a total of \(n = n_w + n_b\) pieces to be placed on the 64 squares of the chessboard.  
+Let \(n\) denote the total number of pieces to be placed on the 64 squares of the chessboard.  
 If all pieces were distinguishable (e.g., labeled), the number of possible placements would correspond to the number of injective mappings from an \(n\)-set to the 64 squares:
 \[
 64 \cdot 63 \cdot 62 \cdots (64 - n + 1) = \frac{64!}{(64 - n)!}.
@@ -322,15 +322,15 @@ These results represent an upper bound, as the legality checks performed do not 
 
 \begin{figure}[h!]
   \centering
-  \includegraphics[width=0.6\textwidth]{positions_per_class.png}
+  \includegraphics[width=0.8\textwidth]{positions_per_class.png}
   \caption{Count of diagrams and legal diagrams over the rank of each material class. The rank of a classes is defined by sorting by the number of all diagrams of the classes.}
   \label{fig:diagrams_per_class}
 \end{figure}
-In \ref{fig:diagrams_per_class} one may observe, that only very few of material classes have a huge impact on the total number of possible (legal) diagrams. Therefore it would be sufficient to only analyze these classes to come up with a good approximation of the stated upper bound for legal diagrams. The noise in the legal diagrams line, is probably due to the statistical approach and a too small sample size. However, we also expect a variation as the true legal ratio may fluctuate between material classes with adjacent rank.
+In \ref{fig:diagrams_per_class} one may observe, that only very few of material classes have a huge impact on the total number of possible (legal) diagrams. Therefore it would be sufficient to only analyze these classes to come up with a good approximation of the stated upper bound for legal diagrams. The noise in the legal diagrams line, is probably due to the statistical approach and an insufficient sample size. However, we also expect a variation as the true legal ratio may fluctuate between material classes with adjacent rank.
 
 \begin{figure}[h!]
   \centering
-  \includegraphics[width=0.6\textwidth]{valid_ratio_per_class.png}
+  \includegraphics[width=0.8\textwidth]{valid_ratio_per_class.png}
   \caption{Legal ratio over the rank of material classes.}
   \label{fig:legal_ratio_by_class}
 \end{figure}
@@ -340,14 +340,14 @@ The figure \ref{fig:diagrams_per_class} shows the legal ratio over all classes, 
 
 \begin{figure}[h!]
   \centering
-  \includegraphics[width=0.6\textwidth]{valid_ratio_per_num_pieces.png}
+  \includegraphics[width=0.8\textwidth]{valid_ratio_per_num_pieces.png}
   \caption{Average Legal ratio over number of chess pieces}
   \label{fig:legal_ratio_by_pieces}
 \end{figure}
 Figure \ref{fig:legal_ratio_by_pieces} shows the average legal ratio over the number of chess pieces. One observes, that the lowest fraction of legal diagrams can be found for 32 pieces. This indicates again, that for solving the problem of finding an upper bound for legal diagrams or positions, analyzing games with high number of pieces is most important.
 \begin{figure}[h!]
   \centering
-  \includegraphics[width=0.6\textwidth]{positions_per_num_pieces.png}
+  \includegraphics[width=0.8\textwidth]{positions_per_num_pieces.png}
   \caption{Average (legal) diagrams ratio over number of chess pieces}
   \label{fig:diagrams_by_pieces}
 \end{figure}
