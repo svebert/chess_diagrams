@@ -45,7 +45,8 @@ def process_material_range(df: pd.DataFrame, start: int, end: int, output_file: 
     Process a range of material classes sequentially and store legality ratios with standard errors.
     """
     results = []
-    slice_df = df.iloc[start:end]
+    slice_df = df.iloc[start:end].copy()
+    slice_df = slice_df.sort_values("diagrams", ascending=False).reset_index(drop=True)
     for _, row in tqdm(slice_df.iterrows(), total=len(slice_df), desc=f"Range {start}-{end}"):
         class_id = int(row["id"])
         white_material = eval(row["white"])
@@ -98,7 +99,6 @@ def main():
 
     logging.info(f"Loading material classes from {args.input}")
     df = pd.read_parquet(args.input)
-    df = df.sort_values("diagrams", ascending=False).reset_index(drop=True)
     total = len(df)
     logging.info(f"{total} classes loaded.")
 
