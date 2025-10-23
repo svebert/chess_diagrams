@@ -15,11 +15,20 @@ def test_pawn_file_rule():
         board.set_piece_at(chess.square(0, rank), chess.Piece(chess.PAWN, chess.WHITE))
     assert not is_position_legal(board)
 
-def test_bishop_color_rule_no_promotion_true():
+def test_bishop_light_color_rule_no_promotion_true():
     board = chess.Board(None)
     # Two bishops on same color (both light squares)
-    board.set_piece_at(chess.C1, chess.Piece(chess.BISHOP, chess.WHITE))
+    board.set_piece_at(chess.B3, chess.Piece(chess.BISHOP, chess.WHITE))
     board.set_piece_at(chess.F5, chess.Piece(chess.BISHOP, chess.WHITE))
+    board.set_piece_at(chess.E8, chess.Piece(chess.KING, chess.BLACK))
+    board.set_piece_at(chess.E1, chess.Piece(chess.KING, chess.WHITE))
+    assert not is_position_legal(board, no_promotion=True)
+
+def test_bishop_dark_color_rule_no_promotion_true():
+    board = chess.Board(None)
+    # Two bishops on same color (both light squares)
+    board.set_piece_at(chess.B4, chess.Piece(chess.BISHOP, chess.BLACK))
+    board.set_piece_at(chess.F6, chess.Piece(chess.BISHOP, chess.BLACK))
     board.set_piece_at(chess.E8, chess.Piece(chess.KING, chess.BLACK))
     board.set_piece_at(chess.E1, chess.Piece(chess.KING, chess.WHITE))
     assert not is_position_legal(board, no_promotion=True)
@@ -27,7 +36,7 @@ def test_bishop_color_rule_no_promotion_true():
 def test_bishop_color_rule_no_promotion_false():
     board = chess.Board(None)
     # Two bishops on same color, but no_promotion=False should ignore
-    board.set_piece_at(chess.C1, chess.Piece(chess.BISHOP, chess.WHITE))
+    board.set_piece_at(chess.B3, chess.Piece(chess.BISHOP, chess.WHITE))
     board.set_piece_at(chess.F5, chess.Piece(chess.BISHOP, chess.WHITE))
     board.set_piece_at(chess.E8, chess.Piece(chess.KING, chess.BLACK))
     board.set_piece_at(chess.E1, chess.Piece(chess.KING, chess.WHITE))
