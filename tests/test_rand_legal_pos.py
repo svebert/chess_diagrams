@@ -55,4 +55,4 @@ def test_bishop_color_rule_no_promotion_false():
 def test_simple_invalid():
     board = chess.Board(None)
     board.set_piece_at(chess.E8, chess.Piece(chess.KING, chess.BLACK))
-    assert is_position_legal(board, no_promotion=False)
+    assert not is_position_legal(board, no_promotion=False)
