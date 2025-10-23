@@ -3,6 +3,9 @@ name: Build LaTeX PDF on PR
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+    paths:
+      - '**.tex'
+      - '**.png'
 
 jobs:
   build:
@@ -11,7 +14,7 @@ jobs:
     steps:
       # 1️⃣ Checkout PR branch
       - name: Checkout PR branch
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
         with:
           ref: ${{ github.head_ref }}
 
