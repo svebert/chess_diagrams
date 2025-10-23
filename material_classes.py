@@ -62,9 +62,13 @@ def count_diagrams(white: Dict[str, int], black: Dict[str, int]) -> int:
 
     return numerator // denominator
     
+from typing import Dict, List, Optional, Tuple
+import itertools
+
 
 def generate_material_classes(
-    limits: Optional[Dict[str, int]] = None
+    limits: Optional[Dict[str, int]] = None,
+    max_classes: Optional[int] = None,
 ) -> List[Tuple[Dict[str, int], Dict[str, int]]]:
     """
     Generate all distinct material classes (white/black piece combinations).
@@ -73,6 +77,9 @@ def generate_material_classes(
     ----------
     limits : dict of str -> int, optional
         Maximum allowed pieces per type. Defaults to standard chess piece limits.
+    max_classes : int, optional
+        If provided, stops generation after this many material class combinations.
+        Useful for testing or performance-limited environments.
 
     Returns
     -------
@@ -83,6 +90,7 @@ def generate_material_classes(
         limits = {"K": 1, "Q": 1, "R": 2, "B": 2, "N": 2, "P": 8}
 
     def all_side_materials() -> List[Dict[str, int]]:
+        """Generate all valid material configurations for one side."""
         side_classes = []
         for q in range(limits["Q"] + 1):
             for r in range(limits["R"] + 1):
@@ -99,11 +107,14 @@ def generate_material_classes(
 
     classes = []
     for w, b in itertools.product(white_materials, black_materials):
-        total_w = sum(w.values())
-        total_b = sum(b.values())
-        total = total_w + total_b
-        if total <= 32 and total_w <= 16 and total_b <= 16:
+        total = sum(w.values()) + sum(b.values())
+        # Limit total pieces on board
+        if total <= 32 and len(w.values()) =16 and len(b.values())<=16:
             classes.append((w, b))
+            # Stop early if max_classes reached
+            if max_classes is not None and len(classes) >= max_classes:
+                break
+
     return classes
 
 
@@ -126,7 +137,7 @@ def main(
     None
     """
     classes = generate_material_classes()
-    print(f"→ {len(classes):,} Materialklassen erzeugt.")
+    print(f"→ {len(classes):,} material classes generated.")
 
     records = []
     for i, (w, b) in enumerate(classes, start=1):
