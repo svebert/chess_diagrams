@@ -81,11 +81,11 @@ def test_large_consistency_with_math_perm():
     """
     For a large total number of distinct pieces (e.g. 10),
     count_diagrams should exactly match math.perm(64, 10)
-    when there are no identical pieces.
+    when there are NO identical pieces (all counts <= 1).
     """
-    white = {"K": 1, "Q": 1, "R": 2, "B": 2, "N": 2, "P": 2}  # total = 10
-    black = {}
-    total = sum(white.values())
+    white = {"K": 1, "Q": 1, "R": 1, "B": 1, "N": 1}
+    black = {"K": 1, "Q": 1, "R": 1, "B": 1, "N": 1}
+    total = sum(white.values()) + sum(black.values())  # = 10
     result = count_diagrams(white, black)
     expected = math.perm(64, total)
     assert result == expected
