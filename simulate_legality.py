@@ -19,7 +19,7 @@ logging.basicConfig(
 # === Config ===
 INITIAL_SAMPLES = [1000, 2000]
 MAX_SAMPLE = 128_000
-REL_STD_THRESHOLD = 0.05  # stop when relative std < 5%
+REL_STD_THRESHOLD = 0.1 # stop when relative std < 10%
 
 
 def test_legality_for_class(white_material: dict, black_material: dict, sample_size: int, no_promotion: bool = True):
