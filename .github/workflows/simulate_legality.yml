@@ -33,6 +33,7 @@ jobs:
           else
             echo "Generating full dataset"
             python material_classes.py --output_parquet dist/material_classes.parquet
+          fi
       - name: Upload material file
         uses: actions/upload-artifact@v4
         with:
