@@ -6,30 +6,42 @@ import logging
 import pandas as pd
 from tqdm import tqdm
 
-from rand_legal_pos import random_board_from_material
+from rand_legal_pos import random_board_from_material, is_position_legal
 from material_classes import generate_material_classes, count_diagrams
 
-# Logging
+
+# === Logging ===
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%H:%M:%S"
 )
 
-# Defaults / thresholds
+# === Config ===
 INITIAL_SAMPLES = [1000, 2000]
 MAX_SAMPLE = 128_000
 REL_THRESHOLD = 0.10
 ABS_THRESHOLD = 1e-6
 
 
-def test_legality_for_class(white_material, black_material, sample_size: int) -> float:
-    """Return fraction of generated random boards that are legal (board.is_valid())."""
+def test_legality_for_class(white_material: dict, black_material: dict, sample_size: int, no_promotion: bool = True) -> float:
+    """
+    Estimate the fraction of legal diagrams for a given material configuration.
+    
+    Args:
+        white_material (dict): Piece counts for White (e.g. {"K":1,"Q":1,"R":0,...})
+        black_material (dict): Piece counts for Black.
+        sample_size (int): Number of random diagrams to test.
+        no_promotion (bool): Whether to enforce stricter bishop/pawn legality rules.
+    
+    Returns:
+        float: Estimated ratio of legal diagrams.
+    """
     legal = 0
     for _ in range(sample_size):
         try:
             board = random_board_from_material(white_material, black_material)
-            if board.is_valid():
+            if is_position_legal(board, no_promotion=no_promotion):
                 legal += 1
         except Exception:
             continue
@@ -37,7 +49,9 @@ def test_legality_for_class(white_material, black_material, sample_size: int) ->
 
 
 def process_material_range(df: pd.DataFrame, start: int, end: int, output_file: str):
-    """Process a range of material classes sequentially and write results to parquet."""
+    """
+    Process a range of material classes sequentially and store legality ratios.
+    """
     results = []
     slice_df = df.iloc[start:end]
     for _, row in tqdm(slice_df.iterrows(), total=len(slice_df), desc=f"Range {start}-{end}"):
@@ -45,7 +59,6 @@ def process_material_range(df: pd.DataFrame, start: int, end: int, output_file: 
         white_material = eval(row["white"])
         black_material = eval(row["black"])
 
-        # initial samples
         class_rows = []
         for sample_size in INITIAL_SAMPLES:
             start_t = time.time()
@@ -54,7 +67,6 @@ def process_material_range(df: pd.DataFrame, start: int, end: int, output_file: 
             logging.info(f"Class {class_id}, sample {sample_size}: {ratio:.4e} legal ({duration:.1f}s)")
             class_rows.append({"id": class_id, "sample_size": sample_size, "legal_ratio": ratio})
 
-        # adaptive extra sample if necessary
         if len(class_rows) >= 2:
             last_two = sorted(class_rows, key=lambda r: r["sample_size"], reverse=True)[:2]
             ratio_max = last_two[0]["legal_ratio"]
@@ -74,30 +86,22 @@ def process_material_range(df: pd.DataFrame, start: int, end: int, output_file: 
     logging.info(f"Saved {len(out_df)} rows to {output_file}")
 
 
-def merge_parquets(input_dir: str, output_file: str):
-    """Merge all parquet files from a directory into one file."""
-    files = sorted([f for f in os.listdir(input_dir) if f.endswith(".parquet")])
-    if not files:
-        logging.warning(f"No parquet files found in {input_dir}")
-        return
-    dfs = [pd.read_parquet(os.path.join(input_dir, f)) for f in files]
-    combined = pd.concat(dfs, ignore_index=True)
-    combined.to_parquet(output_file, index=False)
-    logging.info(f"Merged {len(files)} parquet files into {output_file}")
-
-
 def main():
+    """
+    CLI entry point for legality simulation.
+
+    Example usage:
+        python simulate_legality.py --start-id 0 --end-id 5000
+        python simulate_legality.py --merge-dir results --output merged.parquet
+    """
     parser = argparse.ArgumentParser(description="Simulate legality ratios for chess material diagrams.")
     parser.add_argument("--start-id", type=int, default=0, help="Start index (inclusive).")
     parser.add_argument("--end-id", type=int, help="End index (exclusive). Default=all.")
     parser.add_argument("--input", type=str, default="material_classes_diagrams.parquet", help="Material parquet input.")
     parser.add_argument("--output", type=str, default="legality_results.parquet", help="Output parquet file.")
-    parser.add_argument("--merge-dir", type=str, help="If set, merge all parquets from this dir into --output.")
+    parser.add_argument("--no-promotion", action="store_true", help="Apply stricter bishop/pawn legality rules (default).")
     args = parser.parse_args()
 
-    if args.merge_dir:
-        merge_parquets(args.merge_dir, args.output)
-        return
 
     logging.info(f"Loading material classes from {args.input}")
     df = pd.read_parquet(args.input)
