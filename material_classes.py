@@ -61,7 +61,7 @@ def count_diagrams(white: Dict[str, int], black: Dict[str, int]) -> int:
         denominator = 1
 
     return numerator // denominator
-
+    
 
 def generate_material_classes(
     limits: Optional[Dict[str, int]] = None
@@ -99,8 +99,10 @@ def generate_material_classes(
 
     classes = []
     for w, b in itertools.product(white_materials, black_materials):
-        total = sum(w.values()) + sum(b.values())
-        if total <= 32 and w.values() <= 16 and b.values() <= 16:
+        total_w = sum(w.values())
+        total_b = sum(b.values())
+        total = total_w + total_b
+        if total <= 32 and total_w <= 16 and total_b <= 16:
             classes.append((w, b))
     return classes
 
