@@ -1,5 +1,5 @@
 import chess
-from random_board import random_board_from_material, is_position_legal
+from rand_legal_pos import random_board_from_material, is_position_legal
 
 def test_random_board_from_material_structure():
     white = {"K": 1, "Q": 1, "R": 0, "B": 0, "N": 0, "P": 0}
