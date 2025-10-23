@@ -105,7 +105,7 @@ def main():
 
     logging.info(f"Loading material classes from {args.input}")
     df = pd.read_parquet(args.input)
-    df = df.sort_values("diagram_count", ascending=False).reset_index(drop=True)
+    df = df.sort_values("diagrams", ascending=False).reset_index(drop=True)
     total = len(df)
     logging.info(f"{total} classes loaded.")
 
