@@ -1,48 +1,37 @@
 name: Generate Material Classes
 
-# 🔹 Workflow only runs manually
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read  # read-only reicht, da wir nichts committen
+
 jobs:
   generate:
-    name: Generate Material Class Files
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: write  # ⬅️ Needed to push changes / overwrite files
-
     steps:
-      # 1️⃣ Checkout repo
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # 2️⃣ Set up Python 3.12
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: '3.12'
 
-      # 3️⃣ Install dependencies (if you use pandas, pyarrow, etc.)
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas pyarrow numpy
+          pip install pandas pyarrow tqdm numpy
 
-      # 4️⃣ Ensure dist/ folder exists
       - name: Create dist directory
         run: mkdir -p dist
 
-      # 5️⃣ Run the Python script to generate CSV and Parquet
-      - name: Run material_class generator
-        run: |
-          python material_classes.py --output_csv dist/material_classes_diagrams.csv --output_parquet dist/material_classes_diagrams.parquet
+      - name: Run material_classes.py
+        run: python material_classes.py --output-dir dist
 
-      # 6️⃣ Commit and push the generated files back to the repo
-      - name: Commit and push generated files
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add dist/material_classes_diagrams.csv dist/material_classes_diagrams.parquet
-          git commit -m "Auto-update material class data" || echo "No changes to commit"
-          git push
+      - name: Upload generated files as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: material-classes
+          path: dist/
