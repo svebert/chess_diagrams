@@ -12,8 +12,8 @@ logging.basicConfig(
 
 def merge_parquets(input_dir: str, output_file: str):
     """
-    Merge all parquet files from a directory into a single file.
-    
+    Merge all parquet files from a directory (recursively) into a single file.
+
     Args:
         input_dir (str): Directory containing partial parquet files.
         output_file (str): Path to output combined parquet.
@@ -21,14 +21,21 @@ def merge_parquets(input_dir: str, output_file: str):
     if not os.path.exists(input_dir):
         raise FileNotFoundError(f"Input directory '{input_dir}' not found.")
     
-    files = sorted(f for f in os.listdir(input_dir) if f.endswith(".parquet"))
+    # Recursively collect all .parquet files
+    files = []
+    for root, _, filenames in os.walk(input_dir):
+        for f in filenames:
+            if f.endswith(".parquet"):
+                files.append(os.path.join(root, f))
+    
     if not files:
         logging.warning(f"No parquet files found in {input_dir}")
         return
     
     logging.info(f"Merging {len(files)} parquet files from {input_dir} ...")
-    dfs = [pd.read_parquet(os.path.join(input_dir, f)) for f in files]
+    dfs = [pd.read_parquet(f) for f in files]
     combined = pd.concat(dfs, ignore_index=True)
+    
     os.makedirs(os.path.dirname(output_file) or ".", exist_ok=True)
     combined.to_parquet(output_file, index=False)
     logging.info(f"✅ Merged {len(files)} files into {output_file}")
