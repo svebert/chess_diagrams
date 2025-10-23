@@ -62,7 +62,7 @@ jobs:
       - name: Run legality simulation for shard
         run: |
           total=$(python -c "import pandas as pd; print(len(pd.read_parquet('dist/material_classes.parquet')))") 
-          per=$((total / 4))
+          per=$((total / 16))
           start=$(( ${{ matrix.shard }} * per ))
           end=$(( start + per ))
           if [ ${{ matrix.shard }} -eq 3 ]; then end=$total; fi
