@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read  # read-only reicht, da wir nichts committen
+  contents: read  # Keine Schreibrechte nötig, wir committen nichts
 
 jobs:
   generate:
@@ -28,7 +28,10 @@ jobs:
         run: mkdir -p dist
 
       - name: Run material_classes.py
-        run: python material_classes.py --output-dir dist
+        run: |
+          python material_classes.py \
+            --output_csv dist/material_classes_diagrams.csv \
+            --output_parquet dist/material_classes_diagrams.parquet
 
       - name: Upload generated files as artifact
         uses: actions/upload-artifact@v4
