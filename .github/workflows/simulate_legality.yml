@@ -1,128 +1,106 @@
-name: Simulate Chess Legality
+name: Calculate Legal Diagram Ratios
 
 on:
-  workflow_dispatch:  # Nur manuell startbar
+  workflow_dispatch:
+    inputs:
+      max_classes:
+        description: "Max number of material classes to process (for testing). Leave empty for full dataset."
+        required: false
+        default: ""
+
+  push:
+    branches: [ main ]
 
 jobs:
-  # === 1️⃣ Generate material classes ===
-  generate_material:
+  prepare-material:
     runs-on: ubuntu-latest
     outputs:
-      segments: ${{ steps.split.outputs.segments }}
+      material-file: dist/material_classes.parquet
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-
+          python-version: '3.12'
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pandas numpy pyarrow tqdm python-chess
-
+        run: pip install -r requirements.txt
       - name: Generate material classes
         run: |
           mkdir -p dist
-          python material_classes.py --output-parquet dist/material_classes.parquet
-
-      - name: Determine class count and split into 4 segments
-        id: split
-        run: |
-          python - <<'PYCODE'
-          import pandas as pd, math, json
-          df = pd.read_parquet("dist/material_classes.parquet")
-          total = len(df)
-          chunk = math.ceil(total / 4)
-          ranges = [f"{i*chunk}-{min((i+1)*chunk, total)}" for i in range(4)]
-          print(f"Found {total} classes, ranges: {ranges}")
-          print(f"::set-output name=segments::{json.dumps(ranges)}")
-          PYCODE
-
-      - name: Upload material parquet
+          if [ -n "${{ github.event.inputs.max_classes }}" ]; then
+            echo "Generating limited dataset with ${{ github.event.inputs.max_classes }} classes"
+            python material_classes.py --output_parquet dist/material_classes.parquet --max_classes ${{ github.event.inputs.max_classes }}
+          else
+            echo "Generating full dataset"
+            python material_classes.py --output_parquet dist/material_classes.parquet
+          fi
+      - name: Upload material file
         uses: actions/upload-artifact@v4
         with:
-          name: material-classes
+          name: material
           path: dist/material_claaaes.parquet
 
-  # === 2️⃣ Run legality simulation in parallel ===
-  simulate_legality:
-    needs: generate_material
+  simulate:
+    needs: prepare-material
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        segment: ${{ fromJson(needs.generate_material.outputs.segments) }}
+        shard: [0, 1, 2, 3]
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Download material parquet
-        uses: actions/download-artifact@v4
-        with:
-          name: material-classes
-          path: dist
-
+      - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-
+          python-version: '3.12'
       - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Download material file
+        uses: actions/download-artifact@v4
+        with:
+          name: material
+          path: dist
+      - name: Run legality simulation for shard
         run: |
-          python -m pip install --upgrade pip
-          pip install pandas numpy pyarrow tqdm python-chess
-
-      - name: Run legality simulation
-        run: |
+          total=$(python -c "import pandas as pd; print(len(pd.read_parquet('dist/material_classes.parquet')))") 
+          per=$((total / 4))
+          start=$(( ${{ matrix.shard }} * per ))
+          end=$(( start + per ))
+          if [ ${{ matrix.shard }} -eq 3 ]; then end=$total; fi
+          echo "Processing classes $start-$end (of $total total)"
           mkdir -p dist/legality_parts
-          START=$(echo "${{ matrix.segment }}" | cut -d'-' -f1)
-          END=$(echo "${{ matrix.segment }}" | cut -d'-' -f2)
           python simulate_legality.py \
             --input dist/material_claaaes.parquet \
-            --output dist/legality_parts/legality_part_${START}_${END}.parquet \
-            --start-id $START \
-            --end-id $END \
-            --no-promotion
-
+            --start-id $start \
+            --end-id $end \
+            --output dist/legality_parts/results_${{ matrix.shard }}.parquet
       - name: Upload partial results
         uses: actions/upload-artifact@v4
         with:
-          name: legality-part-${{ matrix.segment }}
-          path: dist/legality_parts/*.parquet
+          name: shard-${{ matrix.shard }}
+          path: dist/legality_parts/results_${{ matrix.shard }}.parquet
 
-  # === 3️⃣ Merge all partial results ===
-  merge_results:
-    needs: simulate_legality
+  merge-results:
+    needs: simulate
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Download all partial results
-        uses: actions/download-artifact@v4
-        with:
-          path: dist/legality_parts
-
+      - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
-
+          python-version: '3.12'
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install pandas pyarrow
-
+        run: pip install -r requirements.txt
+      - name: Download all partials
+        uses: actions/download-artifact@v4
+        with:
+          path: dist/legality_parts
       - name: Merge parquet files
         run: |
           python merge_legality_results.py \
             --input-dir dist/legality_parts \
             --output dist/legality_results.parquet
-
-      - name: Upload merged result
+      - name: Upload final merged file
         uses: actions/upload-artifact@v4
         with:
-          name: merged-legality-results
+          name: final-results
           path: dist/legality_results.parquet
