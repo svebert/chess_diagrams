@@ -9,12 +9,22 @@ def test_random_board_from_material_structure():
     assert len(list(board.piece_map().values())) == sum(white.values()) + sum(black.values())
 
 def test_pawn_file_rule():
+    """
+    Verify that a position with 5 pawns in the same file 
+    (for one color) is considered illegal.
+    """
     board = chess.Board(None)
-    # Place 5 white pawns on file a
-    for rank in range(5):
-        board.set_piece_at(chess.square(0, rank), chess.Piece(chess.PAWN, chess.WHITE))
-    assert not is_position_legal(board)
-
+    # Place 5 white pawns in the 'a' file → illegal
+    pawn_squares = [chess.A2, chess.A3, chess.A4, chess.A5, chess.A6]
+    for sq in pawn_squares:
+        board.set_piece_at(sq, chess.Piece(chess.PAWN, chess.WHITE))
+    
+    # Add both kings to make the position minimally valid otherwise
+    board.set_piece_at(chess.E1, chess.Piece(chess.KING, chess.WHITE))
+    board.set_piece_at(chess.E8, chess.Piece(chess.KING, chess.BLACK))
+    
+    assert not is_position_legal(board), "Position with 5 pawns in same file should be illegal"
+    
 def test_bishop_light_color_rule_no_promotion_true():
     board = chess.Board(None)
     # Two bishops on same color (both light squares)
