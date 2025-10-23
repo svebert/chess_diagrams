@@ -1,7 +1,9 @@
 import math
 import pytest
-from material_classes import count_diagrams, generate_material_classes
-
+import os
+import pandas as pd
+import tempfile
+from material_classes import count_diagrams, generate_material_classes, main
 
 def test_basic_case_distinct():
     """
@@ -143,3 +145,34 @@ def test_custom_limits_small_case():
     assert len(classes) == 64
     for w, b in classes:
         assert sum(w.values()) + sum(b.values()) <= 32
+
+
+def test_main_creates_output_files(tmp_path):
+    """
+    Integration test for main():
+    Ensures that CSV and Parquet files are created correctly and contain data.
+    """
+    csv_path = tmp_path / "classes_test.csv"
+    parquet_path = tmp_path / "classes_test.parquet"
+
+    # Run main() with a small dataset for performance
+    main(output_csv=str(csv_path), output_parquet=str(parquet_path), max_classes=5)
+
+    # ✅ Check that files exist
+    assert csv_path.exists(), "CSV file was not created"
+    assert parquet_path.exists(), "Parquet file was not created"
+
+    # ✅ Check that CSV and Parquet can be read and are not empty
+    df_csv = pd.read_csv(csv_path)
+    df_parquet = pd.read_parquet(parquet_path)
+
+    assert not df_csv.empty, "CSV file is empty"
+    assert not df_parquet.empty, "Parquet file is empty"
+
+    # ✅ Check for expected columns
+    expected_columns = {"id", "white", "black", "total_pieces", "diagrams"}
+    assert expected_columns.issubset(df_csv.columns), "CSV missing expected columns"
+    assert expected_columns.issubset(df_parquet.columns), "Parquet missing expected columns"
+
+    # ✅ Check consistent row count
+    assert len(df_csv) == len(df_parquet), "Row count mismatch between CSV and Parquet"
