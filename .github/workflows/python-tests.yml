@@ -32,7 +32,8 @@ jobs:
       - name: Run pytest with coverage
         run: |
           pytest --maxfail=1 --disable-warnings -q --cov=material_diagrams --cov-report=term-missing
-
+        env: 
+          PYTHONPATH: .
       - name: Upload coverage data
         if: always()
         uses: actions/upload-artifact@v4
