@@ -11,7 +11,7 @@ def factorial_division(n, k):
     return result
 
 
-def count_positions(white, black):
+def count_diagrams(white, black):
     """Berechnet Anzahl möglicher Feldbelegungen für gegebene Materialklasse."""
     total = sum(white.values()) + sum(black.values())
     identical_counts = []
@@ -25,9 +25,10 @@ def count_positions(white, black):
     return numerator // denominator
 
 
-def generate_material_classes():
-    """Materialklassen ohne Promotionen."""
-    limits = {"K": 1, "Q": 1, "R": 2, "B": 2, "N": 2, "P": 8}
+def generate_material_classes(limits: dict() = None):
+    """Generate all distinct material classes for white and balck"""
+    if limits is None: 
+        limits = {"K": 1, "Q": 1, "R": 2, "B": 2, "N": 2, "P": 8}
 
     def all_side_materials():
         side_classes = []
@@ -50,27 +51,27 @@ def generate_material_classes():
     return classes
 
 
-def main(output_csv="material_classes_positions.csv", output_parquet="material_classes_positions.parquet"):
+def main(output_csv="material_classes_diagrams.csv", output_parquet="material_classes_diagrams.parquet"):
     classes = generate_material_classes()
     print(f"→ {len(classes):,} Materialklassen erzeugt.")
 
     records = []
     for i, (w, b) in enumerate(classes, start=1):
         total = sum(w.values()) + sum(b.values())
-        positions = count_positions(w, b)
+        diagrams = count_diagrams(w, b)
         records.append({
             "id": i,
             "white": str(w),
             "black": str(b),
             "total_pieces": total,
-            "positions": positions
+            "diagrams": diagrams
         })
         if i % 500 == 0:
             print(f"{i:,}/{len(classes):,} Klassen fertig …")
 
     df = pd.DataFrame(records)
     # Große Zahlen als String konvertieren
-    df["positions"] = df["positions"].astype(str)
+    df["diagrams"] = df["diagrams"].astype(str)
     df.to_csv(output_csv, index=False)
     df.to_parquet(output_parquet, index=False)
 
