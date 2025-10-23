@@ -69,7 +69,7 @@ jobs:
           echo "Processing classes $start-$end (of $total total)"
           mkdir -p dist/legality_parts
           python simulate_legality.py \
-            --input dist/material_claaaes.parquet \
+            --input dist/material_classes.parquet \
             --start-id $start \
             --end-id $end \
             --output dist/legality_parts/results_${{ matrix.shard }}.parquet
