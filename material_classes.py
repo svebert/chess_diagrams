@@ -109,7 +109,7 @@ def generate_material_classes(
     for w, b in itertools.product(white_materials, black_materials):
         total = sum(w.values()) + sum(b.values())
         # Limit total pieces on board
-        if total <= 32 and len(w.values()) =16 and len(b.values())<=16:
+        if total <= 32 and len(w.values()) <=16 and len(b.values()) <= 16:
             classes.append((w, b))
             # Stop early if max_classes reached
             if max_classes is not None and len(classes) >= max_classes:
