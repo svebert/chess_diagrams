@@ -1,107 +1,117 @@
+# simulate_legality.py
 import os
 import time
-import pandas as pd
+import argparse
 import logging
+import pandas as pd
 from tqdm import tqdm
-from rand_legal_pos import random_board_from_material
 
-# === Logging konfigurieren ===
+from rand_legal_pos import random_board_from_material
+from material_classes import generate_material_classes, count_diagrams
+
+# Logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%H:%M:%S"
 )
 
-# === Parameter ===
-MATERIAL_FILE = "material_classes_positions.parquet"
-RESULT_FILE = "legality_results.parquet"
+# Defaults / thresholds
 INITIAL_SAMPLES = [1000, 2000]
 MAX_SAMPLE = 128_000
-REL_THRESHOLD = 0.10  # relative Abweichung für adaptive Samplegröße
-ABS_THRESHOLD = 1e-6  # absolute Abweichung unterhalb dieser Zahl gilt als stabil
+REL_THRESHOLD = 0.10
+ABS_THRESHOLD = 1e-6
 
 
 def test_legality_for_class(white_material, black_material, sample_size: int) -> float:
-    """Generiert sample_size Zufallsstellungen und prüft, ob sie legal sind."""
-    valid = 0
+    """Return fraction of generated random boards that are legal (board.is_valid())."""
+    legal = 0
     for _ in range(sample_size):
         try:
             board = random_board_from_material(white_material, black_material)
             if board.is_valid():
-                valid += 1
+                legal += 1
         except Exception:
             continue
-    return valid / sample_size if sample_size > 0 else 0.0
+    return legal / sample_size if sample_size > 0 else 0.0
 
 
-def main():
-    # === Materialklassen laden und nach positions sortieren ===
-    df = pd.read_parquet(MATERIAL_FILE)
-    df["positions"] = df["positions"].apply(lambda x: float(x))
-    df = df.sort_values("positions", ascending=False).reset_index(drop=True)
-    logging.info(f"{len(df)} Materialklassen geladen und nach 'positions' sortiert.")
-
-    # === Ergebnisse vorbereiten oder laden ===
-    if os.path.exists(RESULT_FILE):
-        results = pd.read_parquet(RESULT_FILE)
-        logging.info(f"Bestehende Ergebnisse geladen ({len(results)} Zeilen).")
-    else:
-        results = pd.DataFrame(columns=["id", "sample_size", "valid_ratio"])
-        logging.info("Keine bestehenden Ergebnisse gefunden, starte neu.")
-
-    # === Hauptschleife über Materialklassen ===
-    for i, row in tqdm(df.iterrows(), total=len(df), desc="Klassen"):
-        class_id = row["id"]
+def process_material_range(df: pd.DataFrame, start: int, end: int, output_file: str):
+    """Process a range of material classes sequentially and write results to parquet."""
+    results = []
+    slice_df = df.iloc[start:end]
+    for _, row in tqdm(slice_df.iterrows(), total=len(slice_df), desc=f"Range {start}-{end}"):
+        class_id = int(row["id"])
         white_material = eval(row["white"])
         black_material = eval(row["black"])
 
-        # Vorhandene Ergebnisse für die Klasse
-        class_results = results.loc[results["id"] == class_id].copy()
-        sample_sizes_done = sorted([int(s) for s in class_results["sample_size"].tolist()])
+        # initial samples
+        class_rows = []
+        for sample_size in INITIAL_SAMPLES:
+            start_t = time.time()
+            ratio = test_legality_for_class(white_material, black_material, sample_size)
+            duration = time.time() - start_t
+            logging.info(f"Class {class_id}, sample {sample_size}: {ratio:.4e} legal ({duration:.1f}s)")
+            class_rows.append({"id": class_id, "sample_size": sample_size, "legal_ratio": ratio})
 
-        # Startwerte für die Schleife
-        if len(sample_sizes_done) < 2:
-            # Fehlende INITIAL_SAMPLES berechnen
-            pending_samples = [s for s in INITIAL_SAMPLES if s not in sample_sizes_done]
-        else:
-            # Prüfen auf Differenz zwischen größtem und zweitgrößtem Sample
-            last_two = class_results.sort_values("sample_size", ascending=False).head(2)
-            ratio_max = last_two.iloc[0]["valid_ratio"]
-            ratio_second = last_two.iloc[1]["valid_ratio"]
+        # adaptive extra sample if necessary
+        if len(class_rows) >= 2:
+            last_two = sorted(class_rows, key=lambda r: r["sample_size"], reverse=True)[:2]
+            ratio_max = last_two[0]["legal_ratio"]
+            ratio_second = last_two[1]["legal_ratio"]
             rel_diff = abs(ratio_max - ratio_second) / max(abs(ratio_second), 1e-12)
             abs_diff = abs(ratio_max - ratio_second)
-
             if rel_diff > REL_THRESHOLD and abs_diff > ABS_THRESHOLD:
-                next_sample = min(int(last_two.iloc[0]["sample_size"] * 2), MAX_SAMPLE)
-                pending_samples = [next_sample]
-            else:
-                pending_samples = []
+                next_sample = min(int(last_two[0]["sample_size"] * 2), MAX_SAMPLE)
+                ratio = test_legality_for_class(white_material, black_material, next_sample)
+                class_rows.append({"id": class_id, "sample_size": next_sample, "legal_ratio": ratio})
 
-        for sample_size in pending_samples:
-            sample_size = int(sample_size)  # Sicherheit: int für range()
-            start = time.time()
-            ratio = test_legality_for_class(white_material, black_material, sample_size)
-            duration = time.time() - start
+        results.extend(class_rows)
 
-            logging.info(
-                f"→ Klasse {class_id}, Sample={sample_size}: "
-                f"{ratio:.4e} gültig ({duration:.1f}s)"
-            )
+    out_df = pd.DataFrame(results)
+    os.makedirs(os.path.dirname(output_file) or ".", exist_ok=True)
+    out_df.to_parquet(output_file, index=False)
+    logging.info(f"Saved {len(out_df)} rows to {output_file}")
 
-            # Ergebnis speichern
-            new_row = pd.DataFrame([{
-                "id": class_id,
-                "sample_size": sample_size,
-                "valid_ratio": ratio
-            }])
-            results = pd.concat([results, new_row], ignore_index=True)
-            results.to_parquet(RESULT_FILE, index=False)
 
-        if i % 1000 == 0:
-            logging.info(f"→ Fortschritt: {i}/{len(df)} Klassen verarbeitet ...")
+def merge_parquets(input_dir: str, output_file: str):
+    """Merge all parquet files from a directory into one file."""
+    files = sorted([f for f in os.listdir(input_dir) if f.endswith(".parquet")])
+    if not files:
+        logging.warning(f"No parquet files found in {input_dir}")
+        return
+    dfs = [pd.read_parquet(os.path.join(input_dir, f)) for f in files]
+    combined = pd.concat(dfs, ignore_index=True)
+    combined.to_parquet(output_file, index=False)
+    logging.info(f"Merged {len(files)} parquet files into {output_file}")
 
-    logging.info("Simulation abgeschlossen ✅")
-    logging.info(f"Ergebnisse gespeichert in: {RESULT_FILE}")
+
+def main():
+    parser = argparse.ArgumentParser(description="Simulate legality ratios for chess material diagrams.")
+    parser.add_argument("--start-id", type=int, default=0, help="Start index (inclusive).")
+    parser.add_argument("--end-id", type=int, help="End index (exclusive). Default=all.")
+    parser.add_argument("--input", type=str, default="material_classes_diagrams.parquet", help="Material parquet input.")
+    parser.add_argument("--output", type=str, default="legality_results.parquet", help="Output parquet file.")
+    parser.add_argument("--merge-dir", type=str, help="If set, merge all parquets from this dir into --output.")
+    args = parser.parse_args()
+
+    if args.merge_dir:
+        merge_parquets(args.merge_dir, args.output)
+        return
+
+    logging.info(f"Loading material classes from {args.input}")
+    df = pd.read_parquet(args.input)
+    df = df.sort_values("diagram_count", ascending=False).reset_index(drop=True)
+    total = len(df)
+    logging.info(f"{total} classes loaded.")
+
+    start = args.start_id
+    end = args.end_id if args.end_id is not None else total
+    if start < 0 or end > total or start >= end:
+        raise ValueError("Invalid start/end range.")
+
+    logging.info(f"Processing range {start}..{end} (total {end-start} classes)")
+    process_material_range(df, start, end, args.output)
 
 
 if __name__ == "__main__":
