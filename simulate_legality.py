@@ -9,7 +9,6 @@ from tqdm import tqdm
 from rand_legal_pos import random_board_from_material, is_position_legal
 from material_classes import generate_material_classes, count_diagrams
 
-
 # === Logging ===
 logging.basicConfig(
     level=logging.INFO,
@@ -20,22 +19,12 @@ logging.basicConfig(
 # === Config ===
 INITIAL_SAMPLES = [1000, 2000]
 MAX_SAMPLE = 128_000
-REL_THRESHOLD = 0.10
-ABS_THRESHOLD = 1e-6
+REL_STD_THRESHOLD = 0.05  # stop when relative std < 5%
 
 
-def test_legality_for_class(white_material: dict, black_material: dict, sample_size: int, no_promotion: bool = True) -> float:
+def test_legality_for_class(white_material: dict, black_material: dict, sample_size: int, no_promotion: bool = True):
     """
-    Estimate the fraction of legal diagrams for a given material configuration.
-    
-    Args:
-        white_material (dict): Piece counts for White (e.g. {"K":1,"Q":1,"R":0,...})
-        black_material (dict): Piece counts for Black.
-        sample_size (int): Number of random diagrams to test.
-        no_promotion (bool): Whether to enforce stricter bishop/pawn legality rules.
-    
-    Returns:
-        float: Estimated ratio of legal diagrams.
+    Estimate the fraction of legal diagrams and its standard error.
     """
     legal = 0
     for _ in range(sample_size):
@@ -45,12 +34,15 @@ def test_legality_for_class(white_material: dict, black_material: dict, sample_s
                 legal += 1
         except Exception:
             continue
-    return legal / sample_size if sample_size > 0 else 0.0
+
+    ratio = legal / sample_size if sample_size > 0 else 0.0
+    std_error = (ratio * (1 - ratio) / sample_size) ** 0.5 if sample_size > 0 else 0.0
+    return ratio, std_error
 
 
 def process_material_range(df: pd.DataFrame, start: int, end: int, output_file: str):
     """
-    Process a range of material classes sequentially and store legality ratios.
+    Process a range of material classes sequentially and store legality ratios with standard errors.
     """
     results = []
     slice_df = df.iloc[start:end]
@@ -60,23 +52,29 @@ def process_material_range(df: pd.DataFrame, start: int, end: int, output_file: 
         black_material = eval(row["black"])
 
         class_rows = []
-        for sample_size in INITIAL_SAMPLES:
-            start_t = time.time()
-            ratio = test_legality_for_class(white_material, black_material, sample_size)
-            duration = time.time() - start_t
-            logging.info(f"Class {class_id}, sample {sample_size}: {ratio:.4e} legal ({duration:.1f}s)")
-            class_rows.append({"id": class_id, "sample_size": sample_size, "legal_ratio": ratio})
 
-        if len(class_rows) >= 2:
-            last_two = sorted(class_rows, key=lambda r: r["sample_size"], reverse=True)[:2]
-            ratio_max = last_two[0]["legal_ratio"]
-            ratio_second = last_two[1]["legal_ratio"]
-            rel_diff = abs(ratio_max - ratio_second) / max(abs(ratio_second), 1e-12)
-            abs_diff = abs(ratio_max - ratio_second)
-            if rel_diff > REL_THRESHOLD and abs_diff > ABS_THRESHOLD:
-                next_sample = min(int(last_two[0]["sample_size"] * 2), MAX_SAMPLE)
-                ratio = test_legality_for_class(white_material, black_material, next_sample)
-                class_rows.append({"id": class_id, "sample_size": next_sample, "legal_ratio": ratio})
+        # Adaptive sampling loop
+        sample_size = INITIAL_SAMPLES[0]
+        while True:
+            ratio, std_error = test_legality_for_class(white_material, black_material, sample_size)
+            rel_std = std_error / ratio if ratio > 0 else 1.0
+
+            logging.info(f"Class {class_id}, sample {sample_size}: {ratio:.4e} legal, rel_std={rel_std:.4f}")
+
+            class_rows.append({
+                "id": class_id,
+                "sample_size": sample_size,
+                "legal_ratio": ratio,
+                "std_error": std_error,
+                "rel_std": rel_std
+            })
+
+            if rel_std < REL_STD_THRESHOLD or sample_size >= MAX_SAMPLE:
+                break
+
+            sample_size = min(sample_size * 2, MAX_SAMPLE)
+            if any(r["sample_size"] == sample_size for r in class_rows):
+                break  # prevent infinite loop if MAX_SAMPLE reached
 
         results.extend(class_rows)
 
@@ -89,19 +87,14 @@ def process_material_range(df: pd.DataFrame, start: int, end: int, output_file: 
 def main():
     """
     CLI entry point for legality simulation.
-
-    Example usage:
-        python simulate_legality.py --start-id 0 --end-id 5000
-        python simulate_legality.py --merge-dir results --output merged.parquet
     """
     parser = argparse.ArgumentParser(description="Simulate legality ratios for chess material diagrams.")
     parser.add_argument("--start-id", type=int, default=0, help="Start index (inclusive).")
     parser.add_argument("--end-id", type=int, help="End index (exclusive). Default=all.")
-    parser.add_argument("--input", type=str, default="material_classes_diagrams.parquet", help="Material parquet input.")
+    parser.add_argument("--input", type=str, default="material_classes.parquet", help="Material parquet input.")
     parser.add_argument("--output", type=str, default="legality_results.parquet", help="Output parquet file.")
-    parser.add_argument("--no-promotion", action="store_true", help="Apply stricter bishop/pawn legality rules (default).")
+    parser.add_argument("--no-promotion", action="store_true", help="Apply stricter bishop/pawn legality rules.")
     args = parser.parse_args()
-
 
     logging.info(f"Loading material classes from {args.input}")
     df = pd.read_parquet(args.input)
