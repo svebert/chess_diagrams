@@ -1,6 +1,6 @@
 import math
 import pytest
-from material_classes import count_diagrams
+from material_classes import count_diagrams, generate_material_classes
 
 
 def test_basic_case_distinct():
@@ -89,3 +89,57 @@ def test_large_consistency_with_math_perm():
     result = count_diagrams(white, black)
     expected = math.perm(64, total)
     assert result == expected
+
+
+def test_default_limits_structure():
+    """
+    The function should return a list of tuples (white_dict, black_dict).
+    Each side must contain standard chess piece keys.
+    """
+    classes = generate_material_classes(max_classes=1)
+    assert isinstance(classes, list)
+    assert all(isinstance(pair, tuple) and len(pair) == 2 for pair in classes)
+
+    w, b = classes[0]
+    expected_keys = {"K", "Q", "R", "B", "N", "P"}
+    assert expected_keys.issubset(w.keys())
+    assert expected_keys.issubset(b.keys())
+
+
+def test_respects_piece_limits():
+    """
+    Each generated material class must not exceed the per-piece limits
+    (e.g., no more than 8 pawns, 2 rooks, etc.).
+    """
+    limits = {"K": 1, "Q": 1, "R": 2, "B": 2, "N": 2, "P": 8}
+    classes = generate_material_classes(limits, max_classes=10000)
+    for w, b in classes:
+        for piece, max_count in limits.items():
+            assert 0 <= w[piece] <= max_count
+            assert 0 <= b[piece] <= max_count
+
+
+def test_total_piece_count_constraint():
+    """
+    Total number of pieces (white + black) must not exceed 32.
+    Each side must not exceed 16 pieces.
+    """
+    classes = generate_material_classes(max_classes=10000)
+    for w, b in classes:
+        total_w = sum(w.values())
+        total_b = sum(b.values())
+        assert total_w <= 16
+        assert total_b <= 16
+        assert total_w + total_b <= 32
+
+
+def test_custom_limits_small_case():
+    """
+    For smaller custom limits, number of generated classes should shrink drastically.
+    """
+    small_limits = {"K": 1, "Q": 1, "R": 1, "B": 0, "N": 0, "P": 1}
+    classes = generate_material_classes(small_limits)
+    # possible combinations: Q(0–1), R(0–1), P(0–1) per side => 2×2×2=8 per side -> 64 total
+    assert len(classes) == 64
+    for w, b in classes:
+        assert sum(w.values()) + sum(b.values()) <= 32
