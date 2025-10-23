@@ -1,0 +1,83 @@
+name: Calculate Legal Diagram Ratios
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  prepare-material:
+    runs-on: ubuntu-latest
+    outputs:
+      material-file: material_classes_diagrams.parquet
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: pip install pandas pyarrow tqdm chess
+      - name: Generate material classes
+        run: python material_classes.py --output material_classes_diagrams.parquet
+      - name: Upload material file
+        uses: actions/upload-artifact@v4
+        with:
+          name: material
+          path: material_classes_diagrams.parquet
+
+  simulate:
+    needs: prepare-material
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        shard: [0, 1, 2, 3] # split into 4 parts (adjust as needed)
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install pandas pyarrow tqdm chess
+      - name: Download material file
+        uses: actions/download-artifact@v4
+        with:
+          name: material
+      - name: Run legality simulation for shard
+        run: |
+          total=$(python -c "import pandas as pd; print(len(pd.read_parquet('material_classes_diagrams.parquet')))") 
+          per=$((total / 4))
+          start=$((matrix.shard * per))
+          end=$((start + per))
+          if [ $matrix_shard -eq 3 ]; then end=$total; fi
+          echo "Processing classes $start-$end"
+          python simulate_legality.py --input material_classes_diagrams.parquet --start-id $start --end-id $end --output results_${{ matrix.shard }}.parquet
+      - name: Upload partial results
+        uses: actions/upload-artifact@v4
+        with:
+          name: shard-${{ matrix.shard }}
+          path: results_${{ matrix.shard }}.parquet
+
+  merge-results:
+    needs: simulate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install dependencies
+        run: pip install pandas pyarrow
+      - name: Download all partials
+        uses: actions/download-artifact@v4
+        with:
+          path: results/
+      - name: Merge parquet files
+        run: python simulate_legality.py --merge-dir results --output final_legality_results.parquet
+      - name: Upload final merged file
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-results
+          path: final_legality_results.parquet
