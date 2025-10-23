@@ -86,20 +86,6 @@ def process_material_range(df: pd.DataFrame, start: int, end: int, output_file: 
     logging.info(f"Saved {len(out_df)} rows to {output_file}")
 
 
-def merge_parquets(input_dir: str, output_file: str):
-    """
-    Merge multiple partial parquet result files into a single file.
-    """
-    files = sorted([f for f in os.listdir(input_dir) if f.endswith(".parquet")])
-    if not files:
-        logging.warning(f"No parquet files found in {input_dir}")
-        return
-    dfs = [pd.read_parquet(os.path.join(input_dir, f)) for f in files]
-    combined = pd.concat(dfs, ignore_index=True)
-    combined.to_parquet(output_file, index=False)
-    logging.info(f"Merged {len(files)} parquet files into {output_file}")
-
-
 def main():
     """
     CLI entry point for legality simulation.
@@ -113,13 +99,9 @@ def main():
     parser.add_argument("--end-id", type=int, help="End index (exclusive). Default=all.")
     parser.add_argument("--input", type=str, default="material_classes_diagrams.parquet", help="Material parquet input.")
     parser.add_argument("--output", type=str, default="legality_results.parquet", help="Output parquet file.")
-    parser.add_argument("--merge-dir", type=str, help="If set, merge all parquets from this directory into --output.")
     parser.add_argument("--no-promotion", action="store_true", help="Apply stricter bishop/pawn legality rules (default).")
     args = parser.parse_args()
 
-    if args.merge_dir:
-        merge_parquets(args.merge_dir, args.output)
-        return
 
     logging.info(f"Loading material classes from {args.input}")
     df = pd.read_parquet(args.input)
