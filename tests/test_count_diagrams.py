@@ -1,6 +1,6 @@
 import math
 import pytest
-from material_diagrams import count_diagrams
+from material_classes import count_diagrams
 
 
 def test_basic_case_distinct():
