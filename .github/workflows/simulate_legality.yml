@@ -33,7 +33,6 @@ jobs:
           else
             echo "Generating full dataset"
             python material_classes.py --output_parquet dist/material_classes.parquet
-          fi
       - name: Upload material file
         uses: actions/upload-artifact@v4
         with:
@@ -45,7 +44,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15]
+        shard: [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python
@@ -62,10 +61,10 @@ jobs:
       - name: Run legality simulation for shard
         run: |
           total=$(python -c "import pandas as pd; print(len(pd.read_parquet('dist/material_classes.parquet')))") 
-          per=$((total / 16))
-          start=$(( ${{ matrix.shard }} * per ))
+          per=$(( (total + 15) / 16 ))  # ceil-division
+          start=$(( matrix.shard * per ))
           end=$(( start + per ))
-          if [ ${{ matrix.shard }} -eq 3 ]; then end=$total; fi
+          if [ $end -gt $total ]; then end=$total; fi
           echo "Processing classes $start-$end (of $total total)"
           mkdir -p dist/legality_parts
           python simulate_legality.py \
