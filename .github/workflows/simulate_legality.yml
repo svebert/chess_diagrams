@@ -38,7 +38,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: material
-          path: dist/material_claaaes.parquet
+          path: dist/material_classes.parquet
 
   simulate:
     needs: prepare-material
