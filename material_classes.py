@@ -1,3 +1,4 @@
+import argparse
 import itertools
 import pandas as pd
 import math
@@ -121,22 +122,21 @@ def generate_material_classes(
 def main(
     output_csv: str = "material_classes_diagrams.csv",
     output_parquet: str = "material_classes_diagrams.parquet",
-) -> None:
+    max_classes: Optional[int] = None,
+):
     """
-    Main routine: Generate material classes and store the number of possible diagrams.
+    Generate and export material class diagrams to CSV and Parquet.
 
     Parameters
     ----------
-    output_csv : str, optional
-        File path to save CSV output.
-    output_parquet : str, optional
-        File path to save Parquet output.
-
-    Returns
-    -------
-    None
+    output_csv : str
+        Path to output CSV file.
+    output_parquet : str
+        Path to output Parquet file.
+    max_classes : int, optional
+        Limit number of classes for testing/performance.
     """
-    classes = generate_material_classes()
+    classes = generate_material_classes(max_classes=max_classes)
     print(f"→ {len(classes):,} material classes generated.")
 
     records = []
@@ -153,15 +153,37 @@ def main(
             }
         )
         if i % 500 == 0:
-            print(f"{i:,}/{len(classes):,} Klassen fertig …")
+            print(f"{i:,}/{len(classes):,} classes done …")
 
     df = pd.DataFrame(records)
     df["diagrams"] = df["diagrams"].astype(str)
+
     df.to_csv(output_csv, index=False)
     df.to_parquet(output_parquet, index=False)
 
-    print(f"\n✅ Fertig gespeichert:\n   CSV → {output_csv}\n   Parquet → {output_parquet}")
+    print(f"\n✅ Files saved to:\n   CSV → {output_csv}\n   Parquet → {output_parquet}")
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description="Generate chess material class diagrams.")
+    parser.add_argument(
+        "--output_csv",
+        type=str,
+        default="dist/material_classes_diagrams.csv",
+        help="Path to output CSV file.",
+    )
+    parser.add_argument(
+        "--output_parquet",
+        type=str,
+        default="dist/material_classes_diagrams.parquet",
+        help="Path to output Parquet file.",
+    )
+    parser.add_argument(
+        "--max_classes",
+        type=int,
+        default=None,
+        help="Limit number of material classes to generate (for testing/performance).",
+    )
+
+    args = parser.parse_args()
+    main(output_csv=args.output_csv, output_parquet=args.output_parquet, max_classes=args.max_classes)
