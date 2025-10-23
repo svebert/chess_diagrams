@@ -63,7 +63,8 @@ jobs:
         run: |
           total=$(python -c "import pandas as pd; print(len(pd.read_parquet('dist/material_classes.parquet')))") 
           per=$(( (total + 15) / 16 ))  # ceil-division
-          start=$(( matrix.shard * per ))
+          shard=${{ matrix.shard }}
+          start=$(( shard * per ))
           end=$(( start + per ))
           if [ $end -gt $total ]; then end=$total; fi
           echo "Processing classes $start-$end (of $total total)"
@@ -72,7 +73,7 @@ jobs:
             --input dist/material_classes.parquet \
             --start-id $start \
             --end-id $end \
-            --output dist/legality_parts/results_${{ matrix.shard }}.parquet
+            --output dist/legality_parts/results_${shard}.parquet
       - name: Upload partial results
         uses: actions/upload-artifact@v4
         with:
