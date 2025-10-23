@@ -43,39 +43,60 @@ def test_legality_for_class(white_material: dict, black_material: dict, sample_s
 def process_material_range(df: pd.DataFrame, start: int, end: int, output_file: str):
     """
     Process a range of material classes sequentially and store legality ratios with standard errors.
+    Accumulates samples across iterations instead of recalculating from scratch.
     """
     results = []
     slice_df = df.iloc[start:end].copy()
     slice_df = slice_df.sort_values("diagrams", ascending=False).reset_index(drop=True)
+
     for _, row in tqdm(slice_df.iterrows(), total=len(slice_df), desc=f"Range {start}-{end}"):
         class_id = int(row["id"])
         white_material = eval(row["white"])
         black_material = eval(row["black"])
 
+        n_total = 0      # bisher gezogene Samples
+        k_total = 0      # bisher gültige Positionen
+        sample_size = INITIAL_SAMPLES[0]
+
         class_rows = []
 
-        # Adaptive sampling loop
-        sample_size = INITIAL_SAMPLES[0]
         while True:
-            ratio, std_error = test_legality_for_class(white_material, black_material, sample_size)
+            # Ziehe nur die zusätzlichen Samples
+            n_new = sample_size if n_total == 0 else sample_size - n_total
+            legal_new = 0
+            for _ in range(n_new):
+                try:
+                    board = random_board_from_material(white_material, black_material)
+                    if is_position_legal(board):
+                        legal_new += 1
+                except Exception:
+                    continue
+
+            # Update der akkumulierten Werte
+            n_total += n_new
+            k_total += legal_new
+            ratio = k_total / n_total if n_total > 0 else 0.0
+            std_error = (ratio * (1 - ratio) / n_total) ** 0.5 if n_total > 0 else 0.0
             rel_std = std_error / ratio if ratio > 0 else 1.0
 
-            logging.info(f"Class {class_id}, sample {sample_size}: {ratio:.4e} legal, rel_std={rel_std:.4f}")
+            logging.info(f"Class {class_id}, total_samples={n_total}, legal_ratio={ratio:.4e}, rel_std={rel_std:.4f}")
 
             class_rows.append({
                 "id": class_id,
-                "sample_size": sample_size,
+                "sample_size": n_total,
                 "legal_ratio": ratio,
                 "std_error": std_error,
                 "rel_std": rel_std
             })
 
-            if rel_std < REL_STD_THRESHOLD or sample_size >= MAX_SAMPLE:
+            # Stoppen, wenn relative Standardabweichung klein genug oder Max-Sample erreicht
+            if rel_std < REL_STD_THRESHOLD or n_total >= MAX_SAMPLE:
                 break
 
+            # Nächstes Sample verdoppeln
             sample_size = min(sample_size * 2, MAX_SAMPLE)
-            if any(r["sample_size"] == sample_size for r in class_rows):
-                break  # prevent infinite loop if MAX_SAMPLE reached
+            if sample_size == n_total:
+                break  # verhindert endlose Schleife
 
         results.extend(class_rows)
 
