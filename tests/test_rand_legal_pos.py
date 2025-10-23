@@ -1,0 +1,58 @@
+import chess
+from rand_legal_pos import random_board_from_material, is_position_legal
+
+def test_random_board_from_material_structure():
+    white = {"K": 1, "Q": 1, "R": 0, "B": 0, "N": 0, "P": 0}
+    black = {"K": 1, "Q": 0, "R": 2, "B": 0, "N": 0, "P": 0}
+    board = random_board_from_material(white, black)
+    assert isinstance(board, chess.Board)
+    assert len(list(board.piece_map().values())) == sum(white.values()) + sum(black.values())
+
+def test_pawn_file_rule():
+    """
+    Verify that a position with 5 pawns in the same file 
+    (for one color) is considered illegal.
+    """
+    board = chess.Board(None)
+    # Place 5 white pawns in the 'a' file → illegal
+    pawn_squares = [chess.A2, chess.A3, chess.A4, chess.A5, chess.A6]
+    for sq in pawn_squares:
+        board.set_piece_at(sq, chess.Piece(chess.PAWN, chess.WHITE))
+    
+    # Add both kings to make the position minimally valid otherwise
+    board.set_piece_at(chess.E1, chess.Piece(chess.KING, chess.WHITE))
+    board.set_piece_at(chess.E8, chess.Piece(chess.KING, chess.BLACK))
+    
+    assert not is_position_legal(board), "Position with 5 pawns in same file should be illegal"
+    
+def test_bishop_light_color_rule_no_promotion_true():
+    board = chess.Board(None)
+    # Two bishops on same color (both light squares)
+    board.set_piece_at(chess.B3, chess.Piece(chess.BISHOP, chess.WHITE))
+    board.set_piece_at(chess.F5, chess.Piece(chess.BISHOP, chess.WHITE))
+    board.set_piece_at(chess.E8, chess.Piece(chess.KING, chess.BLACK))
+    board.set_piece_at(chess.E1, chess.Piece(chess.KING, chess.WHITE))
+    assert not is_position_legal(board, no_promotion=True)
+
+def test_bishop_dark_color_rule_no_promotion_true():
+    board = chess.Board(None)
+    # Two bishops on same color (both light squares)
+    board.set_piece_at(chess.B4, chess.Piece(chess.BISHOP, chess.BLACK))
+    board.set_piece_at(chess.F6, chess.Piece(chess.BISHOP, chess.BLACK))
+    board.set_piece_at(chess.E8, chess.Piece(chess.KING, chess.BLACK))
+    board.set_piece_at(chess.E1, chess.Piece(chess.KING, chess.WHITE))
+    assert not is_position_legal(board, no_promotion=True)
+
+def test_bishop_color_rule_no_promotion_false():
+    board = chess.Board(None)
+    # Two bishops on same color, but no_promotion=False should ignore
+    board.set_piece_at(chess.B3, chess.Piece(chess.BISHOP, chess.WHITE))
+    board.set_piece_at(chess.F5, chess.Piece(chess.BISHOP, chess.WHITE))
+    board.set_piece_at(chess.E8, chess.Piece(chess.KING, chess.BLACK))
+    board.set_piece_at(chess.E1, chess.Piece(chess.KING, chess.WHITE))
+    assert is_position_legal(board, no_promotion=False)
+    
+def test_simple_invalid():
+    board = chess.Board(None)
+    board.set_piece_at(chess.E8, chess.Piece(chess.KING, chess.BLACK))
+    assert not is_position_legal(board, no_promotion=False)
