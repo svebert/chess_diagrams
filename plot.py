@@ -2,7 +2,7 @@
 """
 plot.py
 
-Erzeugt verschiedene Plots zu den Materialklassen und Legalitätsfaktoren.
+Generates several plots for legality factor and material classes 
 
 Plots:
 1. Histogram of number of pieces per material class.
@@ -35,16 +35,16 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # --- Input / Output files ---
-MATERIAL_FILE = "material_classes_positions.parquet"
+MATERIAL_FILE = "material_classes_diagrams.parquet"
 ANALYSIS_FILE = "legality_analysis.parquet"
 RESULT_FILE = "legality_results.parquet"
 
 OUT_HIST_NUM_PIECES = "material_class_histogram.png"
-OUT_POS_SORTED = "positions_per_class.png"
+OUT_DIAG_SORTED = "diagrams_per_class.png"
 OUT_MAX_SAMPLE = "max_sample_per_class.png"
-OUT_VALID_RATIO_SORTED = "valid_ratio_per_class.png"
-OUT_POS_PER_NUM_PIECES = "positions_per_num_pieces.png"
-OUT_VALID_RATIO_PER_NUM_PIECES = "valid_ratio_per_num_pieces.png"
+OUT_LEGAL_RATIO_SORTED = "legal_ratio_per_class.png"
+OUT_DIAG_PER_NUM_PIECES = "diagrams_per_num_pieces.png"
+OUT_LEGAL_RATIO_PER_NUM_PIECES = "legal_ratio_per_num_pieces.png"
 
 # ---------------------------
 # Plot functions
@@ -90,8 +90,8 @@ def plot_positions_sorted(df_analysis):
     plt.grid(True, which='both', linestyle='--', linewidth=0.5)
     plt.legend()
     plt.tight_layout()
-    plt.savefig(OUT_POS_SORTED, dpi=150)
-    logger.info(f"Positions plot saved: {OUT_POS_SORTED}")
+    plt.savefig(OUT_DIAG_SORTED, dpi=150)
+    logger.info(f"Positions plot saved: {OUT_DIAG_SORTED}")
     plt.close()
 
 
@@ -109,22 +109,19 @@ def plot_max_sample(df_res):
     plt.close()
 
 
-def plot_valid_ratio_sorted(df_analysis):
+def plot_legal_ratio_sorted(df_analysis):
     df_plot = df_analysis.copy()
     df_plot['positions_float'] = df_plot['positions'].astype(float)
     df_plot['weighted_positions_float'] = df_plot['weighted_estimated_legal_str'].astype(float)
 
-    # Only plot entries with valid_ratio < 1
-    df_plot = df_plot[df_plot['weighted_positions_float'] < df_plot['positions_float']]
-
-    # Sort by positions
+    # Sort by diagram count
     df_plot = df_plot.sort_values('positions_float').reset_index(drop=True)
 
-    # Compute valid_ratio
-    df_plot['valid_ratio'] = df_plot['weighted_positions_float'] / df_plot['positions_float']
+    # Compute legal_ratio
+    df_plot['legal_ratio'] = df_plot['weighted_positions_float'] / df_plot['positions_float']
 
-    avg_ratio = df_plot['valid_ratio'].mean()
-    weighted_avg_ratio = np.average(df_plot['valid_ratio'], weights=df_plot['positions_float'])
+    avg_ratio = df_plot['legal_ratio'].mean()
+    weighted_avg_ratio = np.average(df_plot['legal_ratio'], weights=df_plot['positions_float'])
 
     plt.figure(figsize=(12,6))
     plt.scatter(range(len(df_plot)), df_plot['valid_ratio'], s=10, alpha=0.7)
