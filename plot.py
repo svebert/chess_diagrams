@@ -177,8 +177,27 @@ def plot_legal_ratio_per_num_pieces(df_analysis):
     logger.info(f"Weighted legal ratio per number of pieces plot saved: {OUT_LEGAL_RATIO_PER_NUM_PIECES}")
     plt.close()
 
-
 def main():
+    # Load data
     logger.info("Loading material classes...")
     df_mat = pd.read_parquet(MATERIAL_FILE)
     logger.info(f"{len(df_mat):,} material classes loaded.")
+
+    logger.info("Loading analysis data...")  
+    df_analysis = pd.read_parquet(ANALYSIS_FILE)  
+    logger.info(f"{len(df_analysis):,} rows loaded.")  
+
+    logger.info("Loading results data...")  
+    df_res = pd.read_parquet(RESULT_FILE)  
+    logger.info(f"{len(df_res):,} rows loaded.")  
+
+    # Call plots  
+    plot_hist_num_pieces(df_mat)  
+    plot_diagrams_sorted(df_analysis)  
+    plot_max_sample(df_res)  
+    plot_legal_ratio_sorted(df_analysis)  
+    plot_diagrams_per_num_pieces(df_analysis)  
+    plot_legal_ratio_per_num_pieces(df_analysis, df_mat)
+
+if __name__ == "__main__":
+    main()
