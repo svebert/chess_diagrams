@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Analyze legality estimation across material classes.
+Compute legality estimates for chess material classes.
 
 Inputs:
  - material_classes_diagrams.parquet
@@ -8,24 +8,17 @@ Inputs:
  - legality_results.parquet
       Columns: id, sample_size, legal_ratio
 
-Process:
- - For each class, select the legal_ratio from the largest sample_size.
- - Compute estimated number of legal positions: diagrams * legal_ratio.
- - Compute global totals and save final merged dataset.
-
-Output:
- - legality_analysis.parquet
+Outputs:
+ - legality_analysis.parquet (one row per class, see columns below)
+ - Printed global statistics
 """
 
-from decimal import Decimal, InvalidOperation
-from typing import Union, Iterable
 import pandas as pd
 import numpy as np
-from tqdm import tqdm
+import math
 import logging
 import os
 
-# Logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s]  %(message)s",
@@ -33,114 +26,76 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# File paths
 MATERIAL_FILE = "material_classes_diagrams.parquet"
 RESULT_FILE = "legality_results.parquet"
 OUTPUT_FILE = "legality_analysis.parquet"
 
 
-def safe_to_decimal(x: Union[str, float, int, None]) -> Decimal:
-    """Safely convert input to Decimal. Falls back to 1 if invalid."""
-    if pd.isna(x):
-        return Decimal(1)
-    try:
-        return Decimal(str(x))
-    except (InvalidOperation, TypeError, ValueError):
-        return Decimal(1)
+def main():
 
+    if not os.path.exists(MATERIAL_FILE):
+        raise FileNotFoundError(MATERIAL_FILE)
+    if not os.path.exists(RESULT_FILE):
+        raise FileNotFoundError(RESULT_FILE)
 
-def get_largest_sample_ratio(group: pd.DataFrame) -> float:
-    """
-    Select the legal_ratio associated with the largest sample_size in the group.
-    """
-    if len(group) == 0:
-        return 1.0
-    row = group.sort_values("sample_size", ascending=False).iloc[0]
-    return float(row["legal_ratio"])
+    df_mat = pd.read_parquet(MATERIAL_FILE)
+    df_res = pd.read_parquet(RESULT_FILE)
 
+    logger.info(f"Material classes: {len(df_mat):,}")
+    logger.info(f"Legality result rows: {len(df_res):,}")
 
-def load_material_classes(filename: str) -> pd.DataFrame:
-    """Load material class data."""
-    if not os.path.exists(filename):
-        logger.error(f"Material file not found: {filename}")
-        raise FileNotFoundError(filename)
-    df = pd.read_parquet(filename)
-    logger.info(f"Loaded {len(df):,} material classes.")
-    return df
+    # Pick best sample per class
+    df_best = (
+        df_res.sort_values("sample_size", ascending=False)
+              .groupby("id")
+              .agg(
+                  best_legal_ratio=("legal_ratio", "first"),
+                  best_sample_size=("sample_size", "first"),
+                  legal_ratio_std=("legal_ratio", "std"),
+              )
+              .reset_index()
+    )
 
+    # Merge onto material classes
+    df = df_mat.merge(df_best, on="id", how="left")
 
-def load_results(filename: str) -> pd.DataFrame:
-    """Load legality result table, return empty table if missing."""
-    if not os.path.exists(filename):
-        logger.warning(f"Results file not found: {filename} — all ratios will default to 1.0.")
-        return pd.DataFrame(columns=["id", "sample_size", "legal_ratio"])
-    df = pd.read_parquet(filename)
-    logger.info(f"Loaded {len(df):,} legality result rows.")
-    return df
+    # Fill missing ratios (classes without samples)
+    df["best_legal_ratio"] = df["best_legal_ratio"].fillna(1.0)
+    df["best_sample_size"] = df["best_sample_size"].fillna(0).astype(int)
+    df["legal_ratio_std"] = df["legal_ratio_std"].fillna(0.0)
 
+    # Convert diagrams to float for calculation
+    diagrams = df["diagrams"].astype(float).to_numpy()
+    ratios = df["best_legal_ratio"].to_numpy()
 
-def compute_ratios(df_mat: pd.DataFrame, df_res: pd.DataFrame) -> pd.DataFrame:
-    """
-    Attach largest-sample legal_ratio to each material class.
-    """
-    tqdm.pandas()
-    grouped = df_res.groupby("id") if len(df_res) > 0 else {}
+    estimated_legal = diagrams * ratios
 
-    logger.info("Determining largest-sample legal ratios per class...")
-    result_list = []
-    for cid in tqdm(df_mat["id"], desc="Ratios", ncols=100, ascii=True):
-        if len(df_res) == 0 or cid not in grouped.groups:
-            ratio = 1.0
-        else:
-            ratio = get_largest_sample_ratio(grouped.get_group(cid))
-        result_list.append((cid, ratio))
+    # Store counts as string to avoid precision loss
+    df["diagram_count_str"] = df["diagrams"].astype(str)
+    df["estimated_legal_count_str"] = estimated_legal.astype(str)
 
-    ratios_df = pd.DataFrame(result_list, columns=["id", "legal_ratio_largest"])
-    merged = df_mat.merge(ratios_df, on="id", how="left")
-    merged["legal_ratio_largest"].fillna(1.0, inplace=True)
-    return merged
+    # Compute global sums using high-precision summation
+    total_diagrams = math.fsum(diagrams)
+    total_estimated_legal = math.fsum(estimated_legal)
 
+    global_factor = total_estimated_legal / total_diagrams
+    mean_legal_ratio = df["best_legal_ratio"].mean()
 
-def compute_weighted_estimates(df_final: pd.DataFrame) -> pd.DataFrame:
-    """
-    Compute estimated number of legal diagrams per class, and global totals.
-    """
-    logger.info("Converting diagrams to Decimal (reference-safe) and float (fast sum)...")
-
-    diagrams_decimal: Iterable[Decimal] = [
-        safe_to_decimal(x) for x in tqdm(df_final["diagrams"], desc="diagrams→Decimal", ncols=100, ascii=True)
+    # Save result parquet
+    out_cols = [
+        "id", "white", "black",
+        "best_legal_ratio", "best_sample_size", "legal_ratio_std",
+        "diagram_count_str", "estimated_legal_count_str"
     ]
-    df_final["diagrams_decimal"] = [str(x) for x in diagrams_decimal]
+    df[out_cols].to_parquet(OUTPUT_FILE, index=False)
 
-    diagrams_float = np.array([float(x) for x in diagrams_decimal], dtype=np.float64)
-    legal_ratio = df_final["legal_ratio_largest"].to_numpy(dtype=np.float64)
-    weighted = diagrams_float * legal_ratio
-
-    df_final["estimated_legal_diagrams_str"] = [str(Decimal(str(v))) for v in weighted]
-
-    total_theoretical = np.sum(diagrams_float, dtype=np.float64)
-    total_estimated = np.sum(weighted, dtype=np.float64)
-
-    logger.info(f"Total theoretical diagrams ≈ {total_theoretical:.3e}")
-    logger.info(f"Total estimated legal diagrams ≈ {total_estimated:.3e}")
-    logger.info(f"Fraction legal ≈ {total_estimated / total_theoretical:.6e}")
-
-    return df_final
-
-
-def save_results(df_final: pd.DataFrame) -> None:
-    """Save full analysis table."""
-    df_final.to_parquet(OUTPUT_FILE, index=False)
-    logger.info(f"Saved analysis: {OUTPUT_FILE}")
-    logger.info("✅ Done.")
-
-
-def main() -> None:
-    df_mat = load_material_classes(MATERIAL_FILE)
-    df_res = load_results(RESULT_FILE)
-    df_final = compute_ratios(df_mat, df_res)
-    df_final = compute_weighted_estimates(df_final)
-    save_results(df_final)
+    logger.info(f"Saved: {OUTPUT_FILE}")
+    logger.info("")
+    logger.info(f"Total diagrams:          {total_diagrams:.3e}")
+    logger.info(f"Total legal diagrams:    {total_estimated_legal:.3e}")
+    logger.info(f"Global legal factor:     {global_factor:.6e}")
+    logger.info(f"Mean per-class factor:   {mean_legal_ratio:.6e}")
+    logger.info("✅ Done.\n")
 
 
 if __name__ == "__main__":
