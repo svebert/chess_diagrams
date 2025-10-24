@@ -5,8 +5,13 @@ import multiprocessing as mp
 import pandas as pd
 import subprocess
 
-def run_shard(shard_index, total_shards, input_file, out_dir):
+def run_shard(shard_index, total_shards, input_file, out_dir, max_classes):
     df = pd.read_parquet(input_file)
+
+    # Apply max_classes if provided
+    if max_classes is not None:
+        df = df.head(max_classes)
+
     total = len(df)
     per = (total + total_shards - 1) // total_shards  # ceil division
 
@@ -44,6 +49,8 @@ def main():
     parser.add_argument("--output", default="legality_results.parquet")
     parser.add_argument("--shards", type=int, default=16)
     parser.add_argument("--workers", type=int, default=None)
+    parser.add_argument("--max-classes", type=int, default=None,
+                        help="Limit number of classes processed (useful for testing)")
     args = parser.parse_args()
 
     out_dir = "legality_parts"
@@ -54,7 +61,10 @@ def main():
 
     jobs = []
     for shard in range(args.shards):
-        jobs.append(pool.apply_async(run_shard, (shard, args.shards, args.input, out_dir)))
+        jobs.append(pool.apply_async(
+            run_shard,
+            (shard, args.shards, args.input, out_dir, args.max_classes)
+        ))
 
     for j in jobs:
         j.wait()
