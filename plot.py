@@ -214,7 +214,7 @@ def main():
     plot_max_sample(df_res)  
     plot_legal_ratio_sorted(df_analysis)  
     plot_diagrams_per_num_pieces(df_analysis)  
-    plot_legal_ratio_per_num_pieces(df_analysis, df_mat)
+    plot_legal_ratio_per_num_pieces(df_analysis)
 
 if __name__ == "__main__":
     main()
