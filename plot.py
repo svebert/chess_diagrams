@@ -186,7 +186,7 @@ def plot_legal_ratio_per_num_pieces(df_analysis: pd.DataFrame):
     plt.ylabel("Weighted Legal Ratio")
     plt.title("Weighted Legal Ratio per Number of Pieces")
     plt.yscale('log')
-    plt.ylim(1e-4, 1
+    plt.ylim(1e-4, 1)
 
 def main():
     # Load data
