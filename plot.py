@@ -20,7 +20,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import logging
-import os
+import math
 
 # Logging
 logging.basicConfig(
@@ -64,8 +64,8 @@ def plot_hist_num_pieces(df_mat: pd.DataFrame):
 def plot_diagrams_sorted(df_analysis: pd.DataFrame):
     """Plot diagrams per material class, sorted by total diagrams. Log y-axis."""
     df_plot = df_analysis.copy()
-    df_plot['diagrams'] = df_plot['diagram_count_str'].apply(int)
-    df_plot['estimated_legal_diagrams'] = df_plot['estimated_legal_count_str'].apply(int)
+    df_plot['diagrams'] = df_plot['diagram_count_str'].apply(lambda x: math.ceil(float(x)))
+    df_plot['estimated_legal_diagrams'] = df_plot['estimated_legal_count_str'].apply(lambda x: math.ceil(float(x)))
 
     # Only calculated classes (legal_ratio < 1)
     df_plot = df_plot[df_plot['estimated_legal_diagrams'] != df_plot['diagrams']]
@@ -103,8 +103,8 @@ def plot_max_sample(df_res: pd.DataFrame):
 
 def plot_legal_ratio_sorted(df_analysis: pd.DataFrame):
     df_plot = df_analysis.copy()
-    df_plot['diagrams'] = df_plot['diagram_count_str'].apply(int)
-    df_plot['estimated_legal_diagrams'] = df_plot['estimated_legal_count_str'].apply(int)
+    df_plot['diagrams'] = df_plot['diagram_count_str'].apply(lambda x: math.ceil(float(x)))
+    df_plot['estimated_legal_diagrams'] = df_plot['estimated_legal_count_str'].apply(lambda x: math.ceil(float(x)))
     df_plot['legal_ratio'] = df_plot['estimated_legal_diagrams'] / df_plot['diagrams']
 
     df_plot = df_plot.sort_values('diagrams').reset_index(drop=True)
@@ -133,8 +133,8 @@ def plot_legal_ratio_sorted(df_analysis: pd.DataFrame):
 def plot_diagrams_per_num_pieces(df_analysis: pd.DataFrame):
     """Aggregate diagrams per number of pieces."""
     df_plot = df_analysis.copy()
-    df_plot['diagrams'] = df_plot['diagram_count_str'].apply(int)
-    df_plot['estimated_legal_diagrams'] = df_plot['estimated_legal_count_str'].apply(int)
+    df_plot['diagrams'] = df_plot['diagram_count_str'].apply(lambda x: math.ceil(float(x)))
+    df_plot['estimated_legal_diagrams'] = df_plot['estimated_legal_count_str'].apply(lambda x: math.ceil(float(x)))
     df_plot['num_pieces'] = df_plot['white'].apply(lambda x: sum(eval(x).values())) + \
                             df_plot['black'].apply(lambda x: sum(eval(x).values()))
 
@@ -162,8 +162,8 @@ def plot_diagrams_per_num_pieces(df_analysis: pd.DataFrame):
 def plot_legal_ratio_per_num_pieces(df_analysis: pd.DataFrame):
     """Weighted legal_ratio per number of pieces (log y-axis)."""
     df_plot = df_analysis.copy()
-    df_plot['diagrams'] = df_plot['diagram_count_str'].apply(int)
-    df_plot['estimated_legal_diagrams'] = df_plot['estimated_legal_count_str'].apply(int)
+    df_plot['diagrams'] = df_plot['diagram_count_str'].apply(lambda x: math.ceil(float(x)))
+    df_plot['estimated_legal_diagrams'] = df_plot['estimated_legal_count_str'].apply(lambda x: math.ceil(float(x)))
     df_plot['legal_ratio'] = df_plot['estimated_legal_diagrams'] / df_plot['diagrams']
     df_plot['num_pieces'] = df_plot['white'].apply(lambda x: sum(eval(x).values())) + \
                             df_plot['black'].apply(lambda x: sum(eval(x).values()))
@@ -188,11 +188,11 @@ def plot_legal_ratio_per_num_pieces(df_analysis: pd.DataFrame):
     plt.yscale('log')
     plt.ylim(1e-4, 1e0)
     plt.grid(True, axis='both', linestyle='--', alpha=0.5)
+    plt.legend()
     plt.tight_layout()
     plt.savefig(OUT_LEGAL_RATIO_PER_NUM_PIECES, dpi=150)
     logger.info(f"Weighted legal ratio per number of pieces plot saved: {OUT_LEGAL_RATIO_PER_NUM_PIECES}")
-    plt.close()
-    
+    plt.close()  
 
 def main():
     # Load data
