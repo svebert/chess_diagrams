@@ -1,48 +1,62 @@
-def worker(worker_index, num_workers, input_file, out_dir, max_classes):
+import argparse
+import os
+import multiprocessing as mp
+import pandas as pd
+
+from simulate_legality import process_material_range
+
+
+def worker(args):
+    df, start, end, output_file = args
     try:
-        print(f"[Worker {worker_index}] Loading dataframe from {input_file}")
-        df = pd.read_parquet(input_file)
+        process_material_range(df, start, end, output_file)
+        return True, output_file
     except Exception as e:
-        print(f"❌ [Worker {worker_index}] FAILED to open input file: {e}")
-        return
+        return False, str(e)
 
-    try:
-        if max_classes is not None:
-            df = df.head(max_classes)
 
-        total = len(df)
-        if total == 0:
-            print(f"⚠️ [Worker {worker_index}] No rows to process (total=0).")
-            return
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", required=True)
+    parser.add_argument("--output", required=True)
+    parser.add_argument("--workers", type=int, default=8)
+    parser.add_argument("--max-classes", type=int, default=None)
+    args = parser.parse_args()
 
-        chunk = (total + num_workers - 1) // num_workers
-        start = worker_index * chunk
-        end = min(start + chunk, total)
-        if start >= end:
-            print(f"⚠️ [Worker {worker_index}] No assigned range.")
-            return
+    df = pd.read_parquet(args.input)
+    if args.max_classes is not None:
+        df = df.head(args.max_classes)
 
-        out_file = os.path.join(out_dir, f"legality_{worker_index}.parquet")
-        print(f"[Worker {worker_index}] Processing rows {start}:{end} -> {out_file}")
+    total = len(df)
+    batch = (total + args.workers - 1) // args.workers
 
-        cmd = [
-            "python", "simulate_legality.py",
-            "--input", input_file,
-            "--start-id", str(start),
-            "--end-id", str(end),
-            "--output", out_file
-        ]
+    out_dir = "legality_parts"
+    os.makedirs(out_dir, exist_ok=True)
 
-        result = subprocess.run(cmd, capture_output=True, text=True)
+    jobs = []
+    for i in range(args.workers):
+        start = i * batch
+        end = min(start + batch, total)
+        if start >= end: 
+            continue
+        out_file = os.path.join(out_dir, f"part_{i}.parquet")
+        jobs.append((df, start, end, out_file))
 
-        if result.returncode != 0:
-            print(f"❌ [Worker {worker_index}] simulate_legality.py FAILED")
-            print("--- STDOUT ---")
-            print(result.stdout)
-            print("--- STDERR ---")
-            print(result.stderr)
+    with mp.Pool(args.workers) as pool:
+        results = pool.map(worker, jobs)
+
+    # Merge
+    dfs = []
+    for ok, val in results:
+        if ok:
+            dfs.append(pd.read_parquet(val))
         else:
-            print(f"✅ [Worker {worker_index}] Finished successfully.")
+            print("❗ Worker failed:", val)
 
-    except Exception as e:
-        print(f"❌ [Worker {worker_index}] ERROR: {e}")
+    final = pd.concat(dfs, ignore_index=True)
+    final.to_parquet(args.output, index=False)
+    print(f"✅ Saved merged results to {args.output}")
+
+
+if __name__ == "__main__":
+    main()
