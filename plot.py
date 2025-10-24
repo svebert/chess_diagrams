@@ -186,7 +186,13 @@ def plot_legal_ratio_per_num_pieces(df_analysis: pd.DataFrame):
     plt.ylabel("Weighted Legal Ratio")
     plt.title("Weighted Legal Ratio per Number of Pieces")
     plt.yscale('log')
-    plt.ylim(1e-4, 1)
+    plt.ylim(1e-4, 1e0)
+    plt.grid(True, axis='both', linestyle='--', alpha=0.5)
+    plt.tight_layout()
+    plt.savefig(OUT_LEGAL_RATIO_PER_NUM_PIECES, dpi=150)
+    logger.info(f"Weighted legal ratio per number of pieces plot saved: {OUT_LEGAL_RATIO_PER_NUM_PIECES}")
+    plt.close()
+    
 
 def main():
     # Load data
