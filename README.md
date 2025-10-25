@@ -1,11 +1,12 @@
 #ToDo
-- Tests des python code bzgl. Summation der Großen Zahlen, sowie Weighted Mean
+
 - Verlinkung Code im Paper
-- Umbenennung im Code usw bzgl Positions/Diagrams und Valid Ratio/Legal Ratio
+- Abstract Zahl aktualisieren
+- Monte Carlo Teil neuschreiben
+- Std Beschreiben
+- Daraus mit Fehler Fortpflanzung die Unsicherheit auf das Gesamtergebnis ableiten
+- Anzahl aller samples sowie mittlere sample size und max sample size ausrechnen und angeben
+- Figure5 Beschriftung fixen
 - Klare Definition der Begriffe in einer eigenen Subsection: Positions vs Diagrams, Reachable vs Legal vs All
 - Einordnung der drei unterschiedlichen Zahlen für Legal Positions in Tabelle 1
-- Bishop color-lock validation einprogrammieren
-- Stabilitätskriterium auf 5% reduzieren 
-- Alles nochmal durchrechnen
-- Auf Basis der unterschiedlichen Sample Sizes eine Std für die legal Faktoren ausrechnen
-- Daraus mit Fehler Fortpflanzung die Unsicherheit auf das Gesamtergebnis ableiten 
+
