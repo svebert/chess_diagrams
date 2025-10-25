@@ -319,7 +319,7 @@ where:
 Using this procedure, the estimated upper bound for the total number of legal diagrams is:
 
 \[
-N_{\text{legal}} \approx 2.28 \times 10^{40}.
+N_{\text{legal}} \approx 7.562 \times 10^{39}.
 \]
 To compute this bound we did calculate about 4000 samples per material class and checked the legality:In total about $1\times 10^{9}$ sample diagrams.
 \noindent
@@ -336,7 +336,7 @@ These results represent an upper bound, as the legality checks performed do not 
 
 \begin{figure}[h!]
   \centering
-  \includegraphics[width=0.8\textwidth]{positions_per_class.png}
+  \includegraphics[width=0.8\textwidth]{diagrams_per_class.png}
   \caption{Count of diagrams and legal diagrams over the rank of each material class. The rank of a classes is defined by sorting by the number of all diagrams of the classes.}
   \label{fig:diagrams_per_class}
 \end{figure}
@@ -344,7 +344,7 @@ In \ref{fig:diagrams_per_class} one may observe, that only very few of material 
 
 \begin{figure}[h!]
   \centering
-  \includegraphics[width=0.8\textwidth]{valid_ratio_per_class.png}
+  \includegraphics[width=0.8\textwidth]{legal_ratio_per_class.png}
   \caption{Legal ratio over the rank of material classes.}
   \label{fig:legal_ratio_by_class}
 \end{figure}
@@ -354,14 +354,14 @@ The figure \ref{fig:diagrams_per_class} shows the legal ratio over all classes, 
 
 \begin{figure}[h!]
   \centering
-  \includegraphics[width=0.8\textwidth]{valid_ratio_per_num_pieces.png}
+  \includegraphics[width=0.8\textwidth]{legal_ratio_per_num_pieces.png}
   \caption{Average Legal ratio over number of chess pieces}
   \label{fig:legal_ratio_by_pieces}
 \end{figure}
 Figure \ref{fig:legal_ratio_by_pieces} shows the average legal ratio over the number of chess pieces. One observes, that the lowest fraction of legal diagrams can be found for 32 pieces. This indicates again, that for solving the problem of finding an upper bound for legal diagrams or positions, analyzing games with high number of pieces is most important.
 \begin{figure}[h!]
   \centering
-  \includegraphics[width=0.8\textwidth]{positions_per_num_pieces.png}
+  \includegraphics[width=0.8\textwidth]{diagrams_per_num_pieces.png}
   \caption{Average (legal) diagrams ratio over number of chess pieces}
   \label{fig:diagrams_by_pieces}
 \end{figure}
