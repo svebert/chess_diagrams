@@ -1,5 +1,8 @@
 *.log
-*.parquet
 *.csv
 __pycache__
-
+env
+legality_parts
+*.aux
+*.bbl
+*.blg

@@ -1,25 +1,24 @@
 #!/usr/bin/env python3
 """
-analyze.py
+Compute legality estimates for chess material classes.
 
-Lädt:
- - material_classes_positions.parquet (Spalten: id, white, black, positions)
- - legality_results.parquet (Spalten: id, sample_size, valid_ratio)
+Inputs:
+ - material_classes_diagrams.parquet
+      Columns: id, white, black, diagrams
+ - legality_results.parquet
+      Columns: id, sample_size, legal_ratio
 
-Berechnet:
- - Für jede Klasse: valid_ratio des größten Samples
- - weighted_estimated_legal = positions * valid_ratio
- - Summen (Fast Sum) mit Ladebalken
- - speichert Ergebnisse
+Outputs:
+ - legality_analysis.parquet (one row per class, see columns below)
+ - Printed global statistics
 """
-from decimal import Decimal, InvalidOperation
+
 import pandas as pd
 import numpy as np
-from tqdm import tqdm
+import math
 import logging
 import os
 
-# Logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s]  %(message)s",
@@ -27,102 +26,76 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# --- Dateien ---
-MATERIAL_FILE = "material_classes_positions.parquet"
+MATERIAL_FILE = "material_classes_diagrams.parquet"
 RESULT_FILE = "legality_results.parquet"
 OUTPUT_FILE = "legality_analysis.parquet"
 
 
-def safe_to_decimal(x):
-    """Konvertiert String/Nummer zu Decimal. Wenn fehlerhaft -> Decimal(1)."""
-    if pd.isna(x):
-        return Decimal(1)
-    try:
-        return Decimal(str(x))
-    except (InvalidOperation, TypeError, ValueError):
-        return Decimal(1)
-
-
-def get_largest_sample_ratio(group):
-    """Gibt valid_ratio des größten sample_size in der Gruppe zurück."""
-    if len(group) == 0:
-        return 1.0
-    group_sorted = group.sort_values("sample_size", ascending=False)
-    return float(group_sorted.iloc[0]["valid_ratio"])
-
-
-def load_material_classes(filename):
-    if not os.path.exists(filename):
-        logger.error(f"Materialdatei nicht gefunden: {filename}")
-        raise FileNotFoundError
-    df = pd.read_parquet(filename)
-    logger.info(f"{len(df):,} Materialklassen geladen.")
-    return df
-
-
-def load_results(filename):
-    if not os.path.exists(filename):
-        logger.warning(f"Resultatdatei nicht gefunden: {filename} — alle Faktoren = 1.0")
-        return pd.DataFrame(columns=["id", "sample_size", "valid_ratio"])
-    df = pd.read_parquet(filename)
-    logger.info(f"{len(df):,} Ergebnis-Zeilen geladen.")
-    return df
-
-
-def compute_ratios(df_mat, df_res):
-    tqdm.pandas()
-    grouped = df_res.groupby("id") if len(df_res) > 0 else {}
-
-    stats_rows = []
-    ids = df_mat["id"].tolist()
-    logger.info("Hole largest-sample valid_ratio pro Klasse...")
-    for cid in tqdm(ids, desc="Largest sample ratios", ncols=100, dynamic_ncols=True, leave=False, ascii=True):
-        if len(df_res) == 0 or cid not in grouped.groups:
-            stats_rows.append((cid, 1.0))
-        else:
-            grp = grouped.get_group(cid)
-            largest_ratio = get_largest_sample_ratio(grp)
-            stats_rows.append((cid, largest_ratio))
-
-    stats_df = pd.DataFrame(stats_rows, columns=["id", "valid_ratio_largest"])
-    df_final = df_mat.merge(stats_df, on="id", how="left")
-    df_final["valid_ratio_largest"] = df_final["valid_ratio_largest"].fillna(1.0)
-    return df_final
-
-
-def compute_weighted_estimates(df_final):
-    logger.info("Konvertiere 'positions' zu Decimal für Referenz und float für Fast Sum ...")
-    positions_decimal = [safe_to_decimal(x) for x in tqdm(df_final["positions"], desc="Positions -> Decimal", ncols=100, dynamic_ncols=True, leave=False, ascii=True)]
-    df_final["positions_decimal"] = [str(x) for x in positions_decimal]
-
-    positions_float = np.array([float(x) for x in positions_decimal], dtype=np.float64)
-    valid_ratio_float = df_final["valid_ratio_largest"].to_numpy(dtype=np.float64)
-    weighted_estimated_float = positions_float * valid_ratio_float
-
-    df_final["weighted_estimated_legal_str"] = [str(Decimal(str(x))) for x in weighted_estimated_float]
-
-    total_positions = np.sum(positions_float, dtype=np.float64)
-    total_estimated_legal = np.sum(weighted_estimated_float, dtype=np.float64)
-
-    logger.info(f"Gesamt regelunabhängig (positions) ≈ {total_positions:.3e}")
-    logger.info(f"Gesamt geschätzte legale Stellungen ≈ {total_estimated_legal:.3e}")
-    logger.info(f"Verhältnis legal / theoretisch ≈ {total_estimated_legal/total_positions:.6e}")
-    return df_final
-
-
-def save_results(df_final):
-    out_cols = list(df_final.columns)
-    df_final[out_cols].to_parquet(OUTPUT_FILE, index=False)
-    logger.info(f"Analyse vollständig gespeichert: {OUTPUT_FILE}")
-    logger.info("✅ Fertig.")
-
-
 def main():
-    df_mat = load_material_classes(MATERIAL_FILE)
-    df_res = load_results(RESULT_FILE)
-    df_final = compute_ratios(df_mat, df_res)
-    df_final = compute_weighted_estimates(df_final)
-    save_results(df_final)
+
+    if not os.path.exists(MATERIAL_FILE):
+        raise FileNotFoundError(MATERIAL_FILE)
+    if not os.path.exists(RESULT_FILE):
+        raise FileNotFoundError(RESULT_FILE)
+
+    df_mat = pd.read_parquet(MATERIAL_FILE)
+    df_res = pd.read_parquet(RESULT_FILE)
+
+    logger.info(f"Material classes: {len(df_mat):,}")
+    logger.info(f"Legality result rows: {len(df_res):,}")
+
+    # Pick best sample per class
+    df_best = (
+        df_res.sort_values("sample_size", ascending=False)
+              .groupby("id")
+              .agg(
+                  best_legal_ratio=("legal_ratio", "first"),
+                  best_sample_size=("sample_size", "first"),
+                  legal_ratio_std=("legal_ratio", "std"),
+              )
+              .reset_index()
+    )
+
+    # Merge onto material classes
+    df = df_mat.merge(df_best, on="id", how="left")
+
+    # Fill missing ratios (classes without samples)
+    df["best_legal_ratio"] = df["best_legal_ratio"].fillna(1.0)
+    df["best_sample_size"] = df["best_sample_size"].fillna(0).astype(int)
+    df["legal_ratio_std"] = df["legal_ratio_std"].fillna(0.0)
+
+    # Convert diagrams to float for calculation
+    diagrams = df["diagrams"].astype(float).to_numpy()
+    ratios = df["best_legal_ratio"].to_numpy()
+
+    estimated_legal = diagrams * ratios
+
+    # Store counts as string to avoid precision loss
+    df["diagram_count_str"] = df["diagrams"].astype(str)
+    df["estimated_legal_count_str"] = estimated_legal.astype(str)
+
+    # Compute global sums using high-precision summation
+    total_diagrams = math.fsum(diagrams)
+    total_estimated_legal = math.fsum(estimated_legal)
+
+    global_factor = total_estimated_legal / total_diagrams
+    mean_legal_ratio = df["best_legal_ratio"].mean()
+
+    # Save result parquet
+    out_cols = [
+        "id", "white", "black",
+        "best_legal_ratio", "best_sample_size", "legal_ratio_std",
+        "diagram_count_str", "estimated_legal_count_str"
+    ]
+    df[out_cols].to_parquet(OUTPUT_FILE, index=False)
+
+    logger.info(f"Saved: {OUTPUT_FILE}")
+    logger.info("")
+    logger.info(f"Total diagrams:          {total_diagrams:.3e}")
+    logger.info(f"Total legal diagrams:    {total_estimated_legal:.3e}")
+    logger.info(f"Global legal factor:     {global_factor:.6e}")
+    logger.info(f"Mean per-class factor:   {mean_legal_ratio:.6e}")
+    logger.info("✅ Done.\n")
 
 
 if __name__ == "__main__":
