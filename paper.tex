@@ -32,7 +32,7 @@
 \maketitle
 
 \begin{abstract}
-The total number of legal chess diagrams remains unknown due to the immense combinatorial complexity of chess and the difficulty of verifying legality/ reachability. This work presents a Monte Carlo sampling approach that operates on the level of material classes—distinct configurations of chess pieces. For each class, random diagrams are generated and tested for legality using the \texttt{python-chess} library. By combining combinatorial enumeration of diagrams within each class with empirically estimated legal ratios, an overall upper bound for the number of legal chess diagrams without promotions is derived. Our results suggest an upper bound of approximately $7.562\times10^{39}\pm5\percent$ legal diagrams, corresponding to roughly one in every 1500 random piece placements being legal. These findings provide a more granular perspective on the distribution of legality across material classes and offer a foundation for future refinements towards even better estimates for upper bounds of legal chess diagrams and chess positions 
+The total number of legal chess diagrams remains unknown due to the immense combinatorial complexity of chess and the difficulty of verifying legality/ reachability. This work presents a Monte Carlo sampling approach that operates on the level of material classes—distinct configurations of chess pieces. For each class, random diagrams are generated and tested for legality using the \texttt{python-chess} library. By combining combinatorial enumeration of diagrams within each class with empirically estimated legal ratios, an overall upper bound for the number of legal chess diagrams without promotions is derived. Our results suggest an upper bound of approximately $7.562\times10^{39}\pm5\%$ legal diagrams, corresponding to roughly one in every 1500 random piece placements being legal. These findings provide a more granular perspective on the distribution of legality across material classes and offer a foundation for future refinements towards even better estimates for upper bounds of legal chess diagrams and chess positions 
 \end{abstract}
 
 \section{Introduction and Motivation}
@@ -375,7 +375,7 @@ where:
 Using this procedure, the estimated upper bound for the total number of legal diagrams is:
 
 \[
-N_{\text{legal}} \approx 7.562 \times 10^{39}\pm3.1^{38} (4.1\percent).
+N_{\text{legal}} \approx 7.562 \times 10^{39}\pm3.1^{38} (4.1\%).
 \]
 To compute this bound we did calculate about 4000 samples per material class (median) and checked the legality: In total about $3\times 10^{9}$ sample diagrams. The minimum sample size was 1000 for some classes and the maximum 128000 for others. As stated above we used a sampling method with adaptive sizes per material class.
 \noindent
