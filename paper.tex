@@ -1,4 +1,4 @@
-\documentclass[12pt]{article}
+in\documentclass[12pt]{article}
 \usepackage{amsmath}
 \usepackage{booktabs}
 \usepackage{geometry}
@@ -221,8 +221,8 @@ Moreover, further constraints must be applied to filter only \emph{legal} positi
 
 \subsubsection{Legal Diagram Verification Using \texttt{python-chess}}
 
-We use the \texttt{python-chess} library~\cite{python-chess} to validate chess diagrams, ensuring that they satisfy all basic structural legality conditions. 
-The validation routine checks a comprehensive set of status flags to detect inconsistencies or impossible states in a given diagram. 
+We employ the \texttt{python-chess} library~\cite{python-chess} to validate generated chess diagrams, ensuring that they satisfy all basic structural legality conditions. 
+The library provides a comprehensive set of status flags to detect inconsistencies or impossible states in a given position. 
 Among others, the following criteria are verified automatically:
 
 \begin{itemize}
@@ -239,8 +239,8 @@ Among others, the following criteria are verified automatically:
 
 \noindent
 If none of these error conditions are triggered, the position is marked as 
-\texttt{STATUS\_VALID}, meaning it satisfies all basic requirements of internal consistency.
-However, this does \emph{not} guarantee that the diagram is reachable by a legal sequence of moves from the initial position---it merely ensures that it respects the fundamental structural rules of chess.
+\texttt{STATUS\_VALID}, meaning it satisfies the fundamental requirements of internal consistency.
+However, this does \emph{not} guarantee that the diagram is reachable by a legal sequence of moves from the initial position---it merely ensures that it respects the structural rules of chess.
 
 \begin{lstlisting}[language=Python, caption={Validation of chess positions using python-chess}, label={lst:is_legal}]
 import chess
@@ -251,7 +251,7 @@ def is_position_legal(board: chess.Board, no_promotion: bool = True) -> bool:
 
     Args:
         board (chess.Board): The board to check.
-        no_promotion (bool): If True, bishop color diversity is enforced for each side.
+        no_promotion (bool): If True, bishop color diversity is enforced.
 
     Returns:
         bool: True if the position is legal, False otherwise.
@@ -274,20 +274,25 @@ def is_position_legal(board: chess.Board, no_promotion: bool = True) -> bool:
         for color in [chess.WHITE, chess.BLACK]:
             bishops = list(board.pieces(chess.BISHOP, color))
             if len(bishops) >= 2:
-                # compute colors of squares: light=True, dark=False
                 colors = [((chess.square_file(b) + chess.square_rank(b)) % 2 == 0) for b in bishops]
-                # if all bishops on same color → invalid
                 if all(colors) or not any(colors):
                     return False
 
     return True
 \end{lstlisting}
 
-\noindent
-\textbf{Important:} The \texttt{python-chess} library does \emph{not} check for bishop color complex legality 
-(e.g., disallowing two bishops of the same color on one side in non-promotion cases). 
-Such configurations can occur legally only through pawn promotion. 
-we did extend the method. See the listing, above.
+\paragraph{Bishop Color Rule.}
+The default \texttt{python-chess} legality checks do not enforce the constraint that two bishops of the same color on a side are only possible through pawn promotion. 
+To address this, our implementation (see Listing~\ref{lst:is_legal}) adds an explicit bishop color diversity check whenever the \texttt{no\_promotion} flag is enabled. 
+This guarantees that each side may have at most one bishop on each color complex, which reflects the structure of a standard chess game without promotions. 
+The heuristic ensures that diagrams with ``illegal twin bishops'' on the same color are excluded from the dataset.
+
+\paragraph{Pawn File Rule.}
+A further extension of the validation routine concerns pawn distribution across files. 
+Our function explicitly rejects any diagram containing five or more pawns of the same color on a single file. 
+The reasoning is straightforward: each file has only eight ranks, and pawns cannot pass each other without capturing. 
+Since at most two pawns of the same color can coexist in one file (a promoted pawn frees its original square, but new pawns cannot be created), the appearance of five or more pawns is structurally impossible. 
+By applying this heuristic, we ensure that positions remain consistent with the basic combinatorial constraints of chess pawn structure.
 
 \subsection{Monte Carlo Sampling and Legal Ratio Estimation}
 
