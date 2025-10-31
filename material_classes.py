@@ -104,73 +104,67 @@ def main(
     max_classes: Optional[int] = None,
 ):
     """
-    Generate and export material class diagrams to CSV and Parquet.
-
-    Generates two files:
-    - Standard chess limits
-    - Extended (with promotion)
+    Generate and export material class diagrams to a single CSV and Parquet file.
+    Both variants (no promotion / with promotion) are combined with a flag column.
     """
+
+    all_records = []
 
     # ---- 1️⃣ Ohne Promotion ----
     print("⏳ Generating material classes (no promotion)...")
     classes_no_promo = generate_material_classes(max_classes=max_classes, allow_promotions=False)
     print(f"→ {len(classes_no_promo):,} material classes (no promotion)")
 
-    records = []
     for i, (w, b) in enumerate(classes_no_promo, start=1):
         total = sum(w.values()) + sum(b.values())
         diagrams = count_diagrams(w, b)
-        records.append(
+        all_records.append(
             {
                 "id": i,
                 "white": str(w),
                 "black": str(b),
                 "total_pieces": total,
                 "diagrams": diagrams,
+                "no_promotion": True,
             }
         )
         if i % 500 == 0:
-            print(f"{i:,}/{len(classes_no_promo):,} done …")
-
-    df_no_promo = pd.DataFrame(records)
-    df_no_promo["diagrams"] = df_no_promo["diagrams"].astype(str)
-    df_no_promo.to_csv(output_csv, index=False)
-    df_no_promo.to_parquet(output_parquet, index=False)
-    print(f"✅ Files saved:\n  CSV → {output_csv}\n  PARQUET → {output_parquet}")
+            print(f"{i:,}/{len(classes_no_promo):,} no-promotion classes done …")
 
     # ---- 2️⃣ Mit Promotion ----
     print("\n⏳ Generating material classes (with promotion)...")
     classes_promo = generate_material_classes(max_classes=max_classes, allow_promotions=True)
     print(f"→ {len(classes_promo):,} material classes (with promotion)")
 
-    records_promo = []
     for i, (w, b) in enumerate(classes_promo, start=1):
         total = sum(w.values()) + sum(b.values())
         diagrams = count_diagrams(w, b)
-        records_promo.append(
+        all_records.append(
             {
                 "id": i,
                 "white": str(w),
                 "black": str(b),
                 "total_pieces": total,
                 "diagrams": diagrams,
+                "no_promotion": False,
             }
         )
         if i % 500 == 0:
-            print(f"{i:,}/{len(classes_promo):,} done …")
+            print(f"{i:,}/{len(classes_promo):,} promotion classes done …")
 
-    df_promo = pd.DataFrame(records_promo)
-    df_promo["diagrams"] = df_promo["diagrams"].astype(str)
+    # ---- 3️⃣ Zusammenführen & Speichern ----
+    df = pd.DataFrame(all_records)
+    df["diagrams"] = df["diagrams"].astype(str)
 
-    # Save unter anderem Dateinamen
-    base_csv = output_csv.replace(".csv", "_promotions.csv")
-    base_parquet = output_parquet.replace(".parquet", "_promotions.parquet")
+    df = df.sort_values(by=["no_promotion", "total_pieces", "id"]).reset_index(drop=True)
 
-    df_promo.to_csv(base_csv, index=False)
-    df_promo.to_parquet(base_parquet, index=False)
+    df.to_csv(output_csv, index=False)
+    df.to_parquet(output_parquet, index=False)
 
-    print(f"✅ Files saved:\n  CSV → {base_csv}\n  PARQUET → {base_parquet}")
-
+    print(f"\n✅ Combined files saved:")
+    print(f"   CSV → {output_csv}")
+    print(f"   PARQUET → {output_parquet}")
+    
 
 # -------------------------------------------------------
 # CLI Entry
