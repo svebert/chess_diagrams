@@ -103,7 +103,7 @@ def is_position_legal(board: chess.Board, no_promotion: bool = True) -> bool:
         pawns_by_file = [0] * 8
         for sq in board.pieces(chess.PAWN, color):
             pawns_by_file[chess.square_file(sq)] += 1
-        if any(count > max_pawn_per_file for count in pawns_by_file):
+        if any(count >= max_pawn_per_file for count in pawns_by_file):
             return False
 
     # 🔹 3️⃣ Bishop-Farbregel:
