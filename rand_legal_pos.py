@@ -1,4 +1,5 @@
 import chess
+from chess import STATUS_VALID, STATUS_PAWNS_ON_BACKRANK
 import random
 from typing import Dict
 
@@ -46,41 +47,85 @@ def random_board_from_material(white: Dict[str, int], black: Dict[str, int]) -> 
     return board
 
 
-def is_position_legal(board: chess.Board, no_promotion: bool = True) -> bool:
-    """
-    Check if a random position is legal according to chess rules.
+# --------------------------------------------------------
+# 🔧 Erweiterte Board-Klasse
+# --------------------------------------------------------
+class CustomBoard(chess.Board):
+    """Erweiterte Board-Klasse, die Bauern auf der Grundreihe erlaubt."""
 
-    Args:
-        board (chess.Board): The board to check.
-        no_promotion (bool): If True, bishop color diversity is enforced for each side.
+    def is_valid_no_promotion(self) -> bool:
+        """
+        Prüft die Stellung auf interne Konsistenz, ignoriert aber den
+        STATUS_PAWNS_ON_BACKRANK-Fehler (Bauern auf der 1./8. Reihe).
+        """
+        status = self.status()
 
-    Returns:
-        bool: True if the position is legal, False otherwise.
-    """
-    # Basic validity check
-    if not board.is_valid():
+        # STATUS_VALID == 0 → alles ok
+        if status == STATUS_VALID:
+            return True
+
+        # Ignoriere nur den Backrank-Fehler
+        if status & ~STATUS_PAWNS_ON_BACKRANK == STATUS_VALID:
+            return True
+
         return False
 
-    # 1️⃣ Pawn column check: no more than 4 pawns in any file per color
-    for color in [chess.WHITE, chess.BLACK]:
-        pawns_by_file = [0] * 8
-        for square in board.pieces(chess.PAWN, color):
-            file_idx = chess.square_file(square)
-            pawns_by_file[file_idx] += 1
-        if any(count >= 5 for count in pawns_by_file):
+
+# --------------------------------------------------------
+# 🧠 Hauptfunktion: is_position_legal()
+# --------------------------------------------------------
+def is_position_legal(board: chess.Board, no_promotion: bool = True) -> bool:
+    """
+    Prüft, ob eine gegebene Stellung schachregelkonform ist.
+
+    Args:
+        board (chess.Board): Die zu prüfende Stellung.
+        no_promotion (bool): Wenn True, wird STATUS_PAWNS_ON_BACKRANK ignoriert
+                             und keine Promotions angenommen.
+
+    Returns:
+        bool: True, wenn die Stellung gültig ist, sonst False.
+    """
+
+    # 🔹 1️⃣ Grundcheck (mit/ohne Promotionregel)
+    if no_promotion:
+        if not isinstance(board, CustomBoard):
+            board = CustomBoard(board.fen())
+        if not board.is_valid_no_promotion():
+            return False
+    else:
+        if not board.is_valid():
             return False
 
-    # 2️⃣ Bishop color check (only if no_promotion=True)
-    if no_promotion:
-        for color in [chess.WHITE, chess.BLACK]:
-            bishops = list(board.pieces(chess.BISHOP, color))
-            if len(bishops) >= 2:
-                # compute colors of squares: light=True, dark=False
-                colors = [((chess.square_file(b) + chess.square_rank(b)) % 2 == 0) for b in bishops]
-                # if all bishops on same color → invalid
-                if all(colors) or not any(colors):
-                    return False
+    # 🔹 2️⃣ Pawn-File-Check – pro Spalte max. 5 (bzw. 6 ohne Promotion) Bauern
+    max_pawn_per_file = 6 if no_promotion else 5
+    for color in [chess.WHITE, chess.BLACK]:
+        pawns_by_file = [0] * 8
+        for sq in board.pieces(chess.PAWN, color):
+            pawns_by_file[chess.square_file(sq)] += 1
+        if any(count >= max_pawn_per_file for count in pawns_by_file):
+            return False
 
+    # 🔹 3️⃣ Bishop-Farbregel:
+    #     - Immer prüfen, wenn no_promotion=True
+    #     - Sonst nur, wenn alle 8 Bauern der Farbe noch vorhanden sind
+    for color in [chess.WHITE, chess.BLACK]:
+        bishops = list(board.pieces(chess.BISHOP, color))
+        num_pawns = len(board.pieces(chess.PAWN, color))
+
+        # Prüfen, ob Läuferregel gilt
+        check_bishop_colors = no_promotion or num_pawns == 8
+        if check_bishop_colors and len(bishops) >= 2:
+            # True = hell, False = dunkel
+            colors = [
+                (chess.square_file(b) + chess.square_rank(b)) % 2 == 0
+                for b in bishops
+            ]
+            # alle gleichfarbig → ungültig
+            if all(colors) or not any(colors):
+                return False
+
+    # 🔹 4️⃣ Alles bestanden
     return True
 
 
