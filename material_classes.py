@@ -169,13 +169,13 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output_csv",
         type=str,
-        default="dist/material_classes_diagrams.csv",
+        default="material_classes_diagrams.csv",
         help="Path to output CSV file.",
     )
     parser.add_argument(
         "--output_parquet",
         type=str,
-        default="dist/material_classes_diagrams.parquet",
+        default="material_classes_diagrams.parquet",
         help="Path to output Parquet file.",
     )
     parser.add_argument(
