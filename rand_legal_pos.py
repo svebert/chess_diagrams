@@ -97,6 +97,18 @@ def is_position_legal(board: chess.Board, no_promotion: bool = True) -> bool:
         if not board.is_valid():
             return False
 
+    # Pawn-Rank-Check für no_promotion:
+    #    - Weiß darf NICHT auf Rang 1 (rank == 0)
+    #    - Schwarz darf NICHT auf Rang 8 (rank == 7)
+    #    - Promotion-Reihen (Weiß: 8 / Schwarz: 1) sind hier erlaubt
+    if no_promotion:
+        for sq in board.pieces(chess.PAWN, chess.WHITE):
+            if chess.square_rank(sq) == 0:  # Rang 1
+                return False
+        for sq in board.pieces(chess.PAWN, chess.BLACK):
+            if chess.square_rank(sq) == 7:  # Rang 8
+                return False
+    
     # 🔹 2️⃣ Pawn-File-Check – pro Spalte max. 5 (bzw. 6 ohne Promotion) Bauern
     max_pawn_per_file = 6 if no_promotion else 5
     for color in [chess.WHITE, chess.BLACK]:
