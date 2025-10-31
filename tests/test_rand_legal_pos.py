@@ -70,7 +70,44 @@ def test_pawn_on_backrank_no_promotion_true():
     assert is_position_legal(board, no_promotion=True), \
         "Bauer auf der 1./8. Reihe darf bei no_promotion=True toleriert werden."
 
+def test_pawn_rank_rule_no_promotion():
+    """
+    Prüft, dass Bauern auf der ersten (weiße) bzw. achten (schwarze) Reihe
+    im no_promotion-Modus ungültig sind.
+    """
+    board = chess.Board(None)
 
+    # Weißer Bauer auf der ersten Reihe (Rang 1 → rank 0)
+    board.set_piece_at(chess.A1, chess.Piece(chess.PAWN, chess.WHITE))
+    board.set_piece_at(chess.E8, chess.Piece(chess.KING, chess.BLACK))
+    board.set_piece_at(chess.E1, chess.Piece(chess.KING, chess.WHITE))
+    assert not is_position_legal(board, no_promotion=True), \
+        "Weißer Bauer auf Rang 1 muss im no_promotion-Modus illegal sein"
+
+    # Schwarzer Bauer auf der achten Reihe (Rang 8 → rank 7)
+    board = chess.Board(None)
+    board.set_piece_at(chess.A8, chess.Piece(chess.PAWN, chess.BLACK))
+    board.set_piece_at(chess.E8, chess.Piece(chess.KING, chess.BLACK))
+    board.set_piece_at(chess.E1, chess.Piece(chess.KING, chess.WHITE))
+    assert not is_position_legal(board, no_promotion=True), \
+        "Schwarzer Bauer auf Rang 8 muss im no_promotion-Modus illegal sein"
+
+    # Aber: Weißer Bauer auf der achten Reihe darf erlaubt sein (Promotionfeld)
+    board = chess.Board(None)
+    board.set_piece_at(chess.A8, chess.Piece(chess.PAWN, chess.WHITE))
+    board.set_piece_at(chess.E8, chess.Piece(chess.KING, chess.BLACK))
+    board.set_piece_at(chess.E1, chess.Piece(chess.KING, chess.WHITE))
+    assert is_position_legal(board, no_promotion=True), \
+        "Weißer Bauer auf Rang 8 muss im no_promotion-Modus erlaubt sein"
+
+    # Und: Schwarzer Bauer auf der ersten Reihe darf erlaubt sein (Promotionfeld)
+    board = chess.Board(None)
+    board.set_piece_at(chess.A1, chess.Piece(chess.PAWN, chess.BLACK))
+    board.set_piece_at(chess.E8, chess.Piece(chess.KING, chess.BLACK))
+    board.set_piece_at(chess.E1, chess.Piece(chess.KING, chess.WHITE))
+    assert is_position_legal(board, no_promotion=True), \
+        "Schwarzer Bauer auf Rang 1 muss im no_promotion-Modus erlaubt sein"
+    
 # -------------------------------------------------------
 # 🧩 Bishop-Farbenregel
 # -------------------------------------------------------
