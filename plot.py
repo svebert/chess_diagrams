@@ -47,36 +47,14 @@ OUT_LEGAL_RATIO_PER_NUM_PIECES = "legal_ratio_per_num_pieces.png"
 # Plot functions
 # ---------------------------
 def plot_hist_num_pieces(df_mat: pd.DataFrame):
-    """
-    Plots histogram of number of pieces per material class (log-scaled y-axis).
-
-    Parameters
-    ----------
-    df_mat : pd.DataFrame
-        DataFrame containing material classes with columns 'white' and 'black'.
-    """
-    # Anzahl Figuren pro Stellung berechnen
-    df_mat["num_pieces"] = (
-        df_mat["white"].apply(lambda x: sum(eval(x).values()))
-        + df_mat["black"].apply(lambda x: sum(eval(x).values()))
-    )
-
-    plt.figure(figsize=(10, 6))
-
-    sns.histplot(
-        df_mat["num_pieces"],
-        bins=range(2, 33),
-        kde=False,
-        color="skyblue",
-        log_scale=(False, True),  # y-Achse logarithmisch
-    )
-
+    df_mat['num_pieces'] = df_mat['white'].apply(lambda x: sum(eval(x).values())) + \
+                           df_mat['black'].apply(lambda x: sum(eval(x).values()))
+    plt.figure(figsize=(10,6))
+    sns.histplot(df_mat['num_pieces'], bins=range(2,33), kde=False, color='skyblue')
     plt.xlabel("Number of Pieces")
-    plt.ylabel("Number of Material Classes (log scale)")
+    plt.ylabel("Number of Material Classes")
     plt.title("Distribution of Material Classes by Number of Pieces")
-    plt.grid(True, axis="both", linestyle="--", alpha=0.5)
-
-    # Layout & Save
+    plt.grid(True, axis='both', linestyle='--', alpha=0.5)
     plt.tight_layout()
     plt.savefig(OUT_HIST_NUM_PIECES, dpi=150)
     logger.info(f"Histogram saved: {OUT_HIST_NUM_PIECES}")
