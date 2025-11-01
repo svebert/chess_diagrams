@@ -3,7 +3,7 @@
 This repository contains the code, data, and results for the paper:
 
 > **Estimating the Number of Legal Chess Diagrams Using Monte Carlo Simulations**  
-> Sven Hans, October 2025
+> Sven Hans, November 2025
 
 📄 **[Read the full paper (PDF)](./paper.pdf)**
 
@@ -20,7 +20,7 @@ We approach this by:
 4. **Aggregating results** across all classes to estimate the global number of legal diagrams and its statistical uncertainty.
 
 Our results suggest an upper bound of  
-**≈ 7.56 × 10^39 ± 4.1% legal diagrams**,  
-meaning that roughly **1 in 1500 random piece placements** is valid.
+**≈ 4.1 × 10^41 ± 2.9% legal diagrams**,  
+meaning that roughly **1 in 800 random piece placements** is valid.
 
 ---
