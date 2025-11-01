@@ -26,7 +26,7 @@
 
 \title{Estimating the Number of Legal Chess Diagrams Using Monte Carlo Simulations}
 \author{Sven Hans}
-\date{October 2025}
+\date{November 2025}
 
 \begin{document}
 \maketitle
@@ -40,9 +40,9 @@ diagrams are generated and tested for legality using the \texttt{python-chess} l
 By combining combinatorial enumeration of diagrams within each class with empirically 
 estimated legal ratios, we derive an overall upper bound for the number of legal chess diagrams 
 without promotions. Our results suggest an upper bound of approximately 
-$7.562\times10^{39} \pm 5\%$ legal diagrams, corresponding to roughly one in every 
-1500 random piece placements being legal. These findings highlight the distribution 
-of legality across material classes and provide a foundation for more refined estimates 
+$1.41\times10^{41} \pm 3\%$ legal diagrams, corresponding to roughly one in every 
+800 random piece placements being legal. These findings highlight the distribution 
+of legality across material classes and provide a foundation for more generalized estimates 
 of legal chess diagrams in future work.
 \end{abstract}
 
@@ -76,7 +76,7 @@ castling and en passant rights, and promotions) and reachability
 
 In addition, many authors apply different restrictions and assumptions when defining or estimating 
 the number of chess positions or diagrams. These include whether promotions are allowed, whether illegal pawn 
-placements are excluded, or whether only reachable positions are considered. Such differences lead 
+placements are excluded, or whether reachable positions are considered or not. Such differences lead 
 to significantly varying numerical estimates. Table~\ref{tab:definitions} summarizes typical definitions 
 and includes representative values from the literature.
 
@@ -133,7 +133,7 @@ In this work we adopt a precise terminology to distinguish different levels of v
 \noindent
 \textbf{Remark.}  
 There exists a gray area between structural legal diagrams and reachable diagrams.  
-For example, in our implementation we classify diagrams with five or more pawns of the same color on one file as ``illegal''. Strictly speaking, such diagrams are not forbidden by the chess rules, but they are unreachable in practice; hence they fall into this ambiguous intermediate zone. Our paper touches this boundary only lightly.
+For example, in our implementation we classify diagrams with six or more pawns of the same color on one file as ``illegal''. Strictly speaking, such diagrams are not forbidden by the chess rules, but they are unreachable in practice; hence they fall into this ambiguous intermediate zone. Our paper touches this boundary only lightly.
 
 
 \subsubsection{Analytical Calculation}
@@ -282,40 +282,93 @@ However, this does \emph{not} guarantee that the diagram is reachable by a legal
 
 \begin{lstlisting}[language=Python, caption={Validation of chess positions using python-chess}, label={lst:is_legal}]
 import chess
+class CustomBoard(chess.Board):
+    """Extended board class that allows pawns on the back rank."""
 
-def is_position_legal(board: chess.Board, no_promotion: bool = True) -> bool:
-    """
-    Check if a random position is legal according to chess rules.
+    def is_valid_no_promotion(self) -> bool:
+        """
+        Checks the position for internal consistency but ignores the
+        STATUS_PAWNS_ON_BACKRANK error (pawns on rank 1/8).
+        """
+        status = self.status()
 
-    Args:
-        board (chess.Board): The board to check.
-        no_promotion (bool): If True, bishop color diversity is enforced.
+        # STATUS_VALID == 0 → everything is fine
+        if status == STATUS_VALID:
+            return True
 
-    Returns:
-        bool: True if the position is legal, False otherwise.
-    """
-    # Basic validity check
-    if not board.is_valid():
+        # Ignore only the back-rank error
+        if status & ~STATUS_PAWNS_ON_BACKRANK == STATUS_VALID:
+            return True
+
         return False
 
-    # Pawn column check: no more than 4 pawns in any file per color
-    for color in [chess.WHITE, chess.BLACK]:
-        pawns_by_file = [0] * 8
-        for square in board.pieces(chess.PAWN, color):
-            file_idx = chess.square_file(square)
-            pawns_by_file[file_idx] += 1
-        if any(count >= 5 for count in pawns_by_file):
+
+# --------------------------------------------------------
+# Main function: is_position_legal()
+# --------------------------------------------------------
+def is_position_legal(board: chess.Board, no_promotion: bool = True) -> bool:
+    """
+    Checks whether a given position is legal according to chess rules.
+
+    Args:
+        board (chess.Board): The position to check.
+        no_promotion (bool): If True, ignores STATUS_PAWNS_ON_BACKRANK
+                             and assumes no pawn promotions.
+
+    Returns:
+        bool: True if the position is valid, otherwise False.
+    """
+
+    # 1. Basic validation (with or without promotion rule)
+    if no_promotion:
+        if not isinstance(board, CustomBoard):
+            board = CustomBoard(board.fen())
+        if not board.is_valid_no_promotion():
+            return False
+    else:
+        if not board.is_valid():
             return False
 
-    # Bishop color check (only if no_promotion=True)
+    # 2. Pawn rank check for no_promotion:
+    #    - White pawns cannot be on rank 1 (rank == 0)
+    #    - Black pawns cannot be on rank 8 (rank == 7)
+    #    - Promotion ranks (White: 8 / Black: 1) are allowed here
     if no_promotion:
-        for color in [chess.WHITE, chess.BLACK]:
-            bishops = list(board.pieces(chess.BISHOP, color))
-            if len(bishops) >= 2:
-                colors = [((chess.square_file(b) + chess.square_rank(b)) % 2 == 0) for b in bishops]
-                if all(colors) or not any(colors):
-                    return False
+        for sq in board.pieces(chess.PAWN, chess.WHITE):
+            if chess.square_rank(sq) == 0:
+                return False
+        for sq in board.pieces(chess.PAWN, chess.BLACK):
+            if chess.square_rank(sq) == 7:
+                return False
+    
+    # 3. Pawn file check – maximum 5 (or 6 without promotion) pawns per file
+    max_pawn_per_file = 6 if no_promotion else 5
+    for color in [chess.WHITE, chess.BLACK]:
+        pawns_by_file = [0] * 8
+        for sq in board.pieces(chess.PAWN, color):
+            pawns_by_file[chess.square_file(sq)] += 1
+        if any(count >= max_pawn_per_file for count in pawns_by_file):
+            return False
 
+    # 4. Bishop color rule:
+    #    - Always check if no_promotion=True
+    #    - Otherwise only if all 8 pawns of that color are still present
+    for color in [chess.WHITE, chess.BLACK]:
+        bishops = list(board.pieces(chess.BISHOP, color))
+        num_pawns = len(board.pieces(chess.PAWN, color))
+
+        check_bishop_colors = no_promotion or num_pawns == 8
+        if check_bishop_colors and len(bishops) >= 2:
+            # True = light square, False = dark square
+            colors = [
+                (chess.square_file(b) + chess.square_rank(b)) % 2 == 0
+                for b in bishops
+            ]
+            # All bishops on the same color → invalid
+            if all(colors) or not any(colors):
+                return False
+
+    # 5. All checks passed
     return True
 \end{lstlisting}
 
@@ -327,10 +380,10 @@ The heuristic ensures that diagrams with ``illegal twin bishops'' on the same co
 
 \paragraph{Pawn File Rule.}
 A further extension of the validation routine concerns pawn distribution across files. 
-Our function explicitly rejects any diagram containing five or more pawns of the same color on a single file. 
-The reasoning is straightforward: each file has only eight ranks, and pawns cannot pass each other without capturing. 
-Since at most two pawns of the same color can coexist in one file (a promoted pawn frees its original square, but new pawns cannot be created), the appearance of five or more pawns is structurally impossible. 
-By applying this heuristic, we ensure that positions remain consistent with the basic combinatorial constraints of chess pawn structure.
+Our function explicitly rejects any diagram containing six or more pawns of the same color on a single file. For the case of allowed promotions the limit for the maximum pawn count per color per file is five. A rigourous proof for these limits is missing in this work ans should be provided in future works.
+
+\paragraph{Pawn Back Rank Rule.}
+In the case of no allowed promotions, the \emph{python-chess} library will return false validations, because it will consider white pawns as illegal in the last rank (and black pawns in the first rank). Therefore we implemented our own legality test for this case.
 
 \subsection{Monte Carlo Sampling and Legal Ratio Estimation}
 
@@ -407,20 +460,20 @@ where:
     \item $r_m$ is the fraction of those diagrams that are structurally legal according to \texttt{python-chess}.
 \end{itemize}
 
-Using this procedure, the estimated upper bound for  the total number of legal diagrams is:
+Using this procedure, the estimated upper bound for the total number of legal diagrams is:
 
 \[
-N_{\text{legal}} \approx 7.562 \times 10^{39}\pm3.1^{38} (4.1\%).
+N_{\text{legal}} \approx 1.41 \times 10^{41}\pm4.1^{39} (2.9\%).
 \]
-To compute this bound we did calculate about 4000 samples per material class (median) and checked the legality: In total about $3\times 10^{9}$ sample diagrams. The minimum sample size was 1000 for some classes and the maximum 128000 for others. As stated above we used a sampling method with adaptive sizes per material class.
+To compute this bound we did calculate about 1000 samples per material class (median) and checked the legality: In total about $441\times 10^{6}$ sample diagrams. The minimum sample size was 1000 for some classes and the maximum 16000 for others. As stated above we used a sampling method with adaptive sizes per material class.
 \noindent
 When compared to the total number of all possible diagrams (i.e., all unconstrained piece placements across all material classes), the global ratio of legal to total diagrams was found to be approximately:
 
 \[
-\frac{N_{\text{legal}}}{N_{\text{all}}} \approx 6.376 \times 10^{-4}.
+\frac{N_{\text{legal}}}{N_{\text{all}}} \approx 1.19\times 10^{-2}.
 \]
 
-This indicates that fewer than one in every 1500 random piece configurations satisfies even the basic structural rules of chess, stated above.
+This indicates that fewer than one in every 800 random piece configurations satisfies even the basic structural rules of chess, stated above.
 The valid ratio~$r_m$ is, however, \emph{not constant} across material classes: positions with a small number of pieces (e.g., king and pawns only) or heavily asymmetrical material distributions exhibit a higher probability of structural legality, while classes with many pieces or numerous pawns show significantly lower ratios due to increased likelihood of overlapping or invalid pawn placements.
 
 These results represent an upper bound, as the legality checks performed do not test for more complex unreachable pawn patterns like side-pawn patterns \cite{mcdonagh2022}. Additionally, the diagrams are not checked for reachability.
@@ -431,7 +484,7 @@ These results represent an upper bound, as the legality checks performed do not 
   \caption{Count of diagrams and legal diagrams over the rank of each material class. The rank of a classes is defined by sorting by the number of all diagrams of the classes.}
   \label{fig:diagrams_per_class}
 \end{figure}
-In \ref{fig:diagrams_per_class} one may observe, that only very few of material classes have a huge impact on the total number of possible (legal) diagrams. Therefore it would be sufficient to only analyze these classes to come up with a good approximation of the stated upper bound for legal diagrams. The noise in the legal diagrams line, is probably due to the statistical approach and an insufficient sample size. However, we also expect a variation as the true legal ratio may fluctuate between material classes with adjacent rank.
+In \ref{fig:diagrams_per_class} one may observe, that only very few of material classes have a huge impact on the total number of possible (legal) diagrams. Therefore it would be sufficient to only analyze these classes to come up with a good approximation of the stated upper bound for legal diagrams. The visible noise in the legal diagrams line, is not entirely due to the statistical approach, as it is higher than our stopping criterion in the sampling process. We observe a significant variation for the true legal ratio between material classes with adjacent rank.
 
 \begin{figure}[h!]
   \centering
@@ -461,7 +514,7 @@ Finally figure \ref{fig:diagrams_by_pieces} shows the number of total and legal 
 
 \section{Summary and Conclusion}
 
-This study demonstrates that Monte Carlo simulations can provide meaningful statistical estimates for the otherwise intractable problem of enumerating legal chess diagrams. By decomposing the search space into well-defined material classes and applying legality checks on sampled diagrams, we approximate the total number of structurally valid configurations to be on the order of $10^{40}$.
+This study demonstrates that Monte Carlo simulations can provide meaningful statistical estimates for the otherwise intractable problem of enumerating legal chess diagrams (without promotions). By decomposing the search space into well-defined material classes and applying legality checks on sampled diagrams, we approximate the total number of structurally valid configurations to be on the order of $10^{41}$.
 
 The data reveal strong variations in the legality ratio across material classes and a systematic decline for positions with a high total number of pieces, especially near the full 32-piece configuration. This indicates that illegalities such as invalid pawn placements and conflicting king states dominate in dense positions.
 
