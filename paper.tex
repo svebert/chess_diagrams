@@ -35,13 +35,12 @@
 \begin{abstract}
 The total number of legal chess diagrams remains unknown due to the immense
 combinatorial complexity of chess and the difficulty of verifying legality (rule consistency) and reachability (arising from a legal game). 
-This work presents a Monte Carlo sampling approach operating on the level of 
-material classes—distinct configurations of chess pieces. For each class, random 
+This work presents a Monte Carlo sampling approach operating on the level of material classes---distinct configurations of chess pieces. For each class, random 
 diagrams are generated and tested for legality using the \texttt{python-chess} library. 
 By combining combinatorial enumeration of diagrams within each class with empirically 
 estimated legal ratios, we derive an overall upper bound for the number of legal chess diagrams 
 without promotions. Our results suggest an upper bound of approximately 
-$1.41\times10^{41} \pm 3\%$ legal diagrams, corresponding to roughly one in every 
+$(1.41\pm 3\%)\times10^{41}$ legal diagrams, corresponding to roughly one in every 
 800 random piece placements being legal. These findings highlight the distribution 
 of legality across material classes and provide a foundation for more generalized estimates 
 of legal chess diagrams in future work.
@@ -108,7 +107,7 @@ Reachable positions with promotions & Reachable positions including all possible
 \label{tab:definitions}
 \end{table}
 
-In this paper we try a similar approach like Tromp \cite{tromp2021b}, however we will count legal diagrams without promotions, not positions. In contrast to Tromp's work, we will sample multiple subspaces defined by single material classes with Monte Carlo and not the full space of diagrams at once.
+In this paper, we adopt a similar approach to Tromp~\cite{tromp2021b}, however, we focus on counting legal diagrams rather than positions. In contrast to Tromp's work, we will sample multiple subspaces defined by single material classes with Monte Carlo and not the full space of diagrams at once.
 
 
 \section{Methods}
@@ -160,8 +159,7 @@ combined material classes is:
 
 \subsubsection{Python Implementation}
 
-The following Python code enumerates all material classes, checking piece
-count constraints and total pieces:
+The following Python code enumerates all material classes, verifying the piece count constraints and total number of pieces.
 
 \begin{lstlisting}[language=Python, caption={Enumeration of all material classes in chess}, label={lst:material-classes}]
 import itertools
@@ -466,7 +464,7 @@ Using this procedure, the estimated upper bound for the total number of legal di
 \[
 N_{\text{legal}} \approx 1.41 \times 10^{41}\pm4.1^{39} (2.9\%).
 \]
-To compute this bound we did calculate about 1000 samples per material class (median) and checked the legality: In total about $441\times 10^{6}$ sample diagrams. The minimum sample size was 1000 for some classes and the maximum 16000 for others. As stated above we used a sampling method with adaptive sizes per material class.
+To compute this bound we did calculate approximately 1000 samples per material class (median) and checked the legality: In total about $441\times 10^{6}$ sample diagrams. The minimum sample size was 1000 for some classes and the maximum 16000 for others. As stated above we used a sampling method with adaptive sizes per material class.
 \noindent
 When compared to the total number of all possible diagrams (i.e., all unconstrained piece placements across all material classes), the global ratio of legal to total diagrams was found to be approximately:
 
@@ -475,7 +473,7 @@ When compared to the total number of all possible diagrams (i.e., all unconstrai
 \]
 
 This indicates that fewer than one in every 800 random piece configurations satisfies even the basic structural rules of chess, stated above.
-The valid ratio~$r_m$ is, however, \emph{not constant} across material classes: positions with a small number of pieces (e.g., king and pawns only) or heavily asymmetrical material distributions exhibit a higher probability of structural legality, while classes with many pieces or numerous pawns show significantly lower ratios due to increased likelihood of overlapping or invalid pawn placements.
+The legal ratio~$r_m$ is, however, \emph{not constant} across material classes: positions with a small number of pieces (e.g., king and pawns only) or heavily asymmetrical material distributions exhibit a higher probability of structural legality, while classes with many pieces or numerous pawns show significantly lower ratios due to increased likelihood of overlapping or invalid pawn placements.
 
 These results represent an upper bound, as the legality checks performed do not test for more complex unreachable pawn patterns like side-pawn patterns \cite{mcdonagh2022}. Additionally, the diagrams are not checked for reachability.
 
