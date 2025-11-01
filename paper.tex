@@ -485,7 +485,7 @@ These results represent an upper bound, as the legality checks performed do not 
   \caption{Count of diagrams and legal diagrams over the rank of each material class. The rank of a classes is defined by sorting by the number of all diagrams of the classes.}
   \label{fig:diagrams_per_class}
 \end{figure}
-In \ref{fig:diagrams_per_class} one may observe, that only very few of material classes have a huge impact on the total number of possible (legal) diagrams. Therefore it would be sufficient to only analyze these classes to come up with a good approximation of the stated upper bound for legal diagrams. The visible noise in the legal diagrams line, is not entirely due to the statistical approach, as it is higher than our stopping criterion in the sampling process. We observe a significant variation for the true legal ratio between material classes with adjacent rank.
+In figure \ref{fig:diagrams_per_class} one may observe, that only very few of material classes have a huge impact on the total number of possible (legal) diagrams. Therefore it would be sufficient to only analyze these classes to come up with a good approximation of the stated upper bound for legal diagrams. The visible noise in the legal diagrams line, is due to the statistical approach.
 
 \begin{figure}[h!]
   \centering
@@ -494,7 +494,7 @@ In \ref{fig:diagrams_per_class} one may observe, that only very few of material 
   \label{fig:legal_ratio_by_class}
 \end{figure}
 
-The figure \ref{fig:diagrams_per_class} shows the legal ratio over all classes, with classes sorted in the same way, as in figure \ref{fig:diagrams_per_class}. One may observe a noisy variation of the legal ratio in dependence of the material class. There is also a systematic drift, with low ratio for classes with high rank. Meaning the fraction of illegal diagrams is higher for classes with large counts of different diagrams.
+The figure \ref{fig:legal_ratio_by_class} shows the legal ratio over all classes, with classes sorted in the same way, as in figure \ref{fig:diagrams_per_class}. One may observe a noisy variation of the legal ratio in dependence of the material class. Only a part of the observed variation is explainable by the statistical approach of measuring the legal ratio. There is also a systematic drift, with low ratio for classes with high rank. Meaning the fraction of illegal diagrams is higher for classes with large counts of different diagrams.
 
 
 \begin{figure}[h!]

@@ -20,7 +20,7 @@ We approach this by:
 4. **Aggregating results** across all classes to estimate the global number of legal diagrams and its statistical uncertainty.
 
 Our results suggest an upper bound of  
-**≈ 4.1 × 10^41 ± 2.9% legal diagrams**,  
+**≈ 1.4 × 10^41 ± 2.9% legal diagrams**,  
 meaning that roughly **1 in 800 random piece placements** is valid.
 
 ---
